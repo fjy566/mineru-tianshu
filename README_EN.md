@@ -61,9 +61,12 @@ Third-party engines, dependencies and model weights retain their respective lice
 Local microbenchmarks: 1500 distinct OCR lines `2007 → 2.01 ms`; 1500 lines across 50 text families `1987 → 23.85 ms`; canonical output lookup with 2000 auxiliary files `23.24 → 0.27 ms` (median of five repetitions).
 These measure specific postprocessing operations, **not end-to-end document inference speed**. See [performance/equivalence evidence](docs/PERFORMANCE_2026-10-16.md).
 
-Download the native development ZIP from [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases).
-It includes source and prebuilt frontend assets; run `./安装天枢开发环境.ps1` in PowerShell 7.6 to install dependencies, download models and create desktop shortcuts.
-This package requires online initialization and does not bundle runtimes or model weights. See the [release notes](docs/RELEASE_v2.2.1-fjy566.1.md).
+Download the v2.2.1-fjy566.2 Windows offline portable package from [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases).
+Download every `.partNNN` volume together with `JOIN_OFFLINE_PACKAGE.ps1` and `release-manifest.json`, then run `pwsh -File .\JOIN_OFFLINE_PACKAGE.ps1` in that directory.
+The script verifies and joins the volumes, extracts the package, and creates desktop start/stop shortcuts. The first launch creates a local administrator account and random password. Edit `frontend/src` in the extracted folder for Vite hot reload.
+The package includes Python, Node.js, PowerShell, frontend dependencies and the MinerU4/audio models. Reserve about 40 GB for download, joining and extraction. The previous online-init release has been withdrawn. See the [v2.2.1-fjy566.2 release notes](docs/RELEASE_v2.2.1-fjy566.2.md) and [offline third-party license list](docs/THIRD_PARTY_LICENSES_OFFLINE.md).
+
+The package targets Windows x64. CUDA acceleration requires a compatible NVIDIA driver; legacy `.doc`/`.ppt` conversion requires Microsoft Office installed locally. Watermark detector weights are not included due to restrictions in their model card.
 
 For editable frontend development, use Python 3.12, Node.js 22.12+ and PowerShell 7.6; follow the [Windows development guide](docs/WINDOWS_MINERU4.md), then run `./启动天枢开发版.ps1` from PowerShell.
 Frontend: `http://127.0.0.1:3000`; stop with `./停止天枢开发版.ps1`.

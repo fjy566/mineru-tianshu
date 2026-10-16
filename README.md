@@ -49,6 +49,8 @@
 本仓库 [fjy566/mineru-tianshu](https://github.com/fjy566/mineru-tianshu) 是
 [magicyuan876/mineru-tianshu](https://github.com/magicyuan876/mineru-tianshu) 的 fork。
 **原项目作者为 magicyuan876 及 MinerU Tianshu Contributors；fjy566 维护此 fork 的增量修改。**
+保留原作者署名、Git 历史、上游链接及原始 [Apache License 2.0](LICENSE)，不将原项目作为本 fork 的原创作品。
+第三方引擎、依赖和模型继续适用各自许可证。
 
 ### 2026-10-16 fork 更新
 
@@ -63,9 +65,12 @@
 
 ### 原生开发入口
 
-可直接从 [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases) 下载原生开发 ZIP。
-解压后用 PowerShell 7.6 执行 `./安装天枢开发环境.ps1`，安装依赖、下载模型并创建桌面快捷方式。
-这是联网初始化包，不包含运行时和模型权重；详细步骤见 [发布说明](docs/RELEASE_v2.2.1-fjy566.1.md)。
+可从 [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases) 下载 v2.2.1-fjy566.2 Windows 离线免安装包。
+下载全部 `.partNNN` 分卷及 `JOIN_OFFLINE_PACKAGE.ps1`、`release-manifest.json`，在同一目录运行 `pwsh -File .\JOIN_OFFLINE_PACKAGE.ps1`。
+脚本会校验分卷、合并并解压 ZIP，并在桌面创建启动/停止快捷方式；首次启动生成本机管理员账号和随机密码。运行目录可直接编辑 `frontend/src`，Vite 会热更新。
+包内含 Python、Node.js、PowerShell、前端依赖及 MinerU4/音频模型。模型权重较大，建议为下载、合并和解压预留约 40 GB 空间。旧版联网初始化包已撤下。详见 [v2.2.1-fjy566.2 发布说明](docs/RELEASE_v2.2.1-fjy566.2.md) 和 [离线包第三方许可清单](docs/THIRD_PARTY_LICENSES_OFFLINE.md)。
+
+离线包面向 Windows x64；CUDA 加速需要兼容的 NVIDIA 驱动，旧 `.doc`/`.ppt` 转换需要本机已安装 Microsoft Office。水印检测权重依其模型卡限制未随包分发。
 
 本 fork 在 Windows 上优先使用 Python 3.12、Node.js 22.12+ 和 PowerShell 7.6 开发部署。
 环境与模型准备见 [Windows 开发说明](docs/WINDOWS_MINERU4.md)，随后在仓库目录执行：

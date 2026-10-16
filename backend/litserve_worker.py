@@ -1454,7 +1454,7 @@ def start_litserve_workers(
     signal.signal(signal.SIGTERM, graceful_shutdown)
     atexit.register(lambda: api.teardown() if hasattr(api, "teardown") else None)
 
-    server.run(port=port, generate_client_file=False)
+    server.run(host=os.getenv("TIANSHU_WORKER_HOST", "0.0.0.0"), port=port, generate_client_file=False)
 
 
 if __name__ == "__main__":

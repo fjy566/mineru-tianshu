@@ -1235,4 +1235,4 @@ if __name__ == "__main__":
     logger.info("🚀 Starting MinerU Tianshu API Server...")
     logger.info(f"📖 API Documentation: http://localhost:{api_port}/docs")
 
-    uvicorn.run(app, host="0.0.0.0", port=api_port, log_level="info")
+    uvicorn.run(app, host=os.getenv("TIANSHU_API_HOST", "0.0.0.0"), port=api_port, log_level="info")

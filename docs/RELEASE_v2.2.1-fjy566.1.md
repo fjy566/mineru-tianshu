@@ -1,5 +1,7 @@
 # 天枢原生开发版 v2.2.1-fjy566.1
 
+> **已撤下：** 此联网初始化 Release 已由 [v2.2.1-fjy566.2 离线免安装包](RELEASE_v2.2.1-fjy566.2.md) 取代。该旧版本说明仅保留在 Git 历史中。
+
 本版本为 [fjy566/mineru-tianshu](https://github.com/fjy566/mineru-tianshu) 的 fork 发布。
 原作者为 **magicyuan876 及 MinerU Tianshu Contributors**；原项目、许可证、署名与 Git 历史均保留。
 
