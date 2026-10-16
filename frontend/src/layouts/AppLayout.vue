@@ -1,3 +1,4 @@
+<!-- Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu. -->
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
     <!-- 顶部导航栏 -->

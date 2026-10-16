@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 FASTA Format Engine - FASTA 格式解析引擎
 
@@ -49,7 +50,7 @@ class FASTAEngine(FormatEngine):
         except ImportError as e:
             self.logger.error("❌ BioPython is required for FASTA parsing")
             raise ImportError(
-                "BioPython is required for FASTA format support. " "Install it with: pip install biopython>=1.80"
+                "BioPython is required for FASTA format support. Install it with: pip install biopython>=1.80"
             ) from e
 
     def parse(self, file_path: str, options: Optional[Dict] = None) -> Dict:
@@ -297,9 +298,9 @@ class FASTAEngine(FormatEngine):
                 stop_pos = translated_str.find("*")
                 if stop_pos != -1:
                     # 保留终止密码子后少量氨基酸以提供上下文
-                    translations[f"frame_{frame+1}_forward"] = translated_str[: stop_pos + 10]
+                    translations[f"frame_{frame + 1}_forward"] = translated_str[: stop_pos + 10]
                 else:
-                    translations[f"frame_{frame+1}_forward"] = translated_str[:200]
+                    translations[f"frame_{frame + 1}_forward"] = translated_str[:200]
 
             # 反向互补3个阅读框
             rev_comp = seq.reverse_complement()
@@ -310,9 +311,9 @@ class FASTAEngine(FormatEngine):
                 translated_str = str(translated)
                 stop_pos = translated_str.find("*")
                 if stop_pos != -1:
-                    translations[f"frame_{frame+1}_reverse"] = translated_str[: stop_pos + 10]
+                    translations[f"frame_{frame + 1}_reverse"] = translated_str[: stop_pos + 10]
                 else:
-                    translations[f"frame_{frame+1}_reverse"] = translated_str[:200]
+                    translations[f"frame_{frame + 1}_reverse"] = translated_str[:200]
         except Exception:
             pass
 
@@ -582,7 +583,7 @@ class FASTAEngine(FormatEngine):
                 ss = seq.get("secondary_structure", {})
                 if ss:
                     lines.append(
-                        f"**{self.common_i18n.get('secondary_structure')}**: α-helix {ss.get('helix', 0)*100:.1f}%, β-sheet {ss.get('sheet', 0)*100:.1f}%"
+                        f"**{self.common_i18n.get('secondary_structure')}**: α-helix {ss.get('helix', 0) * 100:.1f}%, β-sheet {ss.get('sheet', 0) * 100:.1f}%"
                     )
 
                 lines.append("")

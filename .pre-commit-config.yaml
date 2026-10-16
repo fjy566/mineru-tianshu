@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 # Pre-commit hooks for MinerU-Server
 # Install: pip install pre-commit && pre-commit install
 # Run manually: pre-commit run --all-files
@@ -43,7 +44,7 @@ repos:
   # 2. Python 代码格式化 - Ruff Format
   # ============================================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.17.0
     hooks:
       # Ruff formatter (替代 black)
       - id: ruff-format
@@ -53,7 +54,7 @@ repos:
   # 3. Python 代码检查 - Ruff Linter
   # ============================================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.17.0
     hooks:
       # Ruff linter (替代 pylint/flake8)
       - id: ruff

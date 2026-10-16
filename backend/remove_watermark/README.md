@@ -180,11 +180,7 @@ pip install -r requirements.txt
 from watermark_remover import WatermarkRemover
 
 # 使用自定义模型
-remover = WatermarkRemover(
-    model_path="/path/to/your/custom_model.pt",
-    device="cuda",
-    use_lama=True
-)
+remover = WatermarkRemover(model_path="/path/to/your/custom_model.pt", device="cuda", use_lama=True)
 ```
 
 #### 选项 2：批量测试找最佳参数
@@ -199,10 +195,7 @@ dilations = [5, 10, 15, 20]
 # 批量测试
 for conf, dil in itertools.product(confidences, dilations):
     result = remover.remove_watermark(
-        image_path="test.jpg",
-        output_path=f"result_c{conf}_d{dil}.jpg",
-        conf_threshold=conf,
-        dilation=dil
+        image_path="test.jpg", output_path=f"result_c{conf}_d{dil}.jpg", conf_threshold=conf, dilation=dil
     )
 ```
 
@@ -258,8 +251,8 @@ from remove_watermark import WatermarkRemover
 
 # 初始化
 remover = WatermarkRemover(
-    device="cuda",        # 使用 GPU（或 "cpu"）
-    use_lama=True        # 使用 LaMa 修复
+    device="cuda",  # 使用 GPU（或 "cpu"）
+    use_lama=True,  # 使用 LaMa 修复
 )
 
 # 去除图片水印
@@ -267,7 +260,7 @@ result = remover.remove_watermark(
     image_path="input.png",
     output_path="output.png",
     conf_threshold=0.35,  # 检测置信度
-    dilation=10          # 掩码膨胀
+    dilation=10,  # 掩码膨胀
 )
 
 # 清理资源

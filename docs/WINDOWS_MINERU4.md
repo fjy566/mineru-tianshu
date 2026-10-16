@@ -5,6 +5,39 @@
 
 ## 启动与开发
 
+### 首次从 fork 克隆
+
+准备 Python 3.12、Node.js 22.12+、PowerShell 7.6；音视频需要 FFmpeg 加入 PATH，旧 DOC/PPT 转换需要已安装的 Microsoft Office 或 LibreOffice。
+在 PowerShell 7 中执行：
+
+```powershell
+git clone https://github.com/fjy566/mineru-tianshu.git
+Set-Location mineru-tianshu
+py -3.12 -m venv .venv
+& '.venv/Scripts/python.exe' -m pip install -r backend/requirements-dev.txt
+Copy-Item backend/.env.example backend/.env
+```
+
+首次启动前编辑 `backend/.env`，设置自己的 `TIANSHU_ADMIN_PASSWORD` 和随机 `JWT_SECRET_KEY`。
+本机采用项目根目录数据路径时，将 `DATABASE_PATH` 设置为 `../data/db/mineru_tianshu.db`，上传路径保持项目默认值；所有后端进程以 `backend` 为工作目录。
+已有 `.env` 时保留原配置，不要重复覆盖。
+
+```powershell
+$env:MINERU_CONFIG = "$PWD/backend/mineru4.yaml"
+$env:MINERU_HOME = "$PWD/data/mineru4"
+$env:TIANSHU_MODEL_DIR = "$PWD/models"
+& '.venv/Scripts/mineru-kit.exe' models download --tier standard --source modelscope
+& '.venv/Scripts/mineru-kit.exe' models verify --tier standard
+Push-Location frontend
+npm ci
+Pop-Location
+& './启动天枢开发版.ps1'
+```
+
+依赖清单包含可选多模态能力，首次安装和模型下载需要较多空间及网络时间。GPU 使用还取决于本机驱动与 PyTorch CUDA 安装；CPU 路径可由启动器自动检测。
+
+### 已安装的本机环境
+
 使用桌面“启动天枢开发版”和“停止天枢开发版”快捷方式。
 它们调用默认 PowerShell 7.6，运行项目 `.venv` 中的 Python 和 Vite 开发服务器。
 前端地址为 `http://127.0.0.1:3000`，修改 `frontend/src` 会热更新。
@@ -82,3 +115,16 @@ OCR 无法保证模糊扫描、手写、复杂多栏或公式百分之百正确�
 - 登录后返回原请求页面；退出登录先清除认证状态，再进入登录页。
 
 本轮详细修复、按钮验收范围和限制见 [审查与测试报告](REVIEW_2026-10-16.md)。
+
+## 性能重构与回归
+
+转换分发位于 `backend/task_processing/dispatch.py`，纯 OCR 几何处理位于 `backend/mineru_pipeline/ocr_geometry.py`，前端 Markdown 渲染位于 `frontend/src/utils/markdownRenderer.ts`。
+模型和补漏质量参数保持不变，优化的是重复坐标转换、同文去重、文件定位及重复前端渲染。方法与基准见 [性能说明](PERFORMANCE_2026-10-16.md)。
+
+```powershell
+& '.venv/Scripts/python.exe' -m pytest backend/tests -q
+Push-Location frontend
+npm test
+npm run build
+Pop-Location
+```

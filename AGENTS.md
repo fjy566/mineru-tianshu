@@ -243,7 +243,9 @@ npm run typecheck
 npm run build
 ```
 
-`npm run build` 先执行 `vue-tsc --noEmit`，检查 Vue 模板和 TypeScript，再执行 Vite 构建。当前没有前端自动化组件测试套件，浏览器交互需要另行验收。真实格式转换使用合成样本，并记录任务状态、Markdown 标记和结构化数据；外部服务需要真实配置后单独验收。
+`npm run build` 先执行 `vue-tsc --noEmit`，检查 Vue 模板和 TypeScript，再执行 Vite 构建。`npm test` 运行 `frontend/tests/` 中的 Vitest/jsdom 回归，包含旧版 HTML 固定基线和鉴权令牌变化时的渲染复用。浏览器交互需要另行验收。真实格式转换使用合成样本，并记录任务状态、Markdown 标记和结构化数据；外部服务需要真实配置后单独验收。
+
+转换执行分发位于 `task_processing/dispatch.py`，由 Worker 传入服务和可用性信息，不在分发模块加载模型。OCR 纯几何处理位于 `mineru_pipeline/ocr_geometry.py`；页面检查、渲染、模型调用与审计保留在 `ocr_gap_filler.py`。优化不能修改模型、阈值、分辨率或减少页覆盖。可复现脚本与质量等价约束见 `docs/PERFORMANCE_2026-10-16.md`。
 
 现有 CI 工作流 `.github/workflows/pylint.yml` 运行 pre-commit：
 

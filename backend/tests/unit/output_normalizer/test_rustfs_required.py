@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """含图片的任务必须使用 RustFS 或本机 API 文件服务；都未启用时必须失败。
 
 历史问题：RUSTFS_ENABLED=false 时图片保留相对路径，前端无法访问；

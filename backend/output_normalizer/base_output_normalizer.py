@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 输出结果规范化器基类
 """
@@ -115,7 +116,9 @@ class BaseOutputNormalizer:
                 "yes",
             )
             if local_file_server_enabled:
-                logger.info("ℹ️  RustFS disabled; images remain local and are served by the authenticated API file route")
+                logger.info(
+                    "ℹ️  RustFS disabled; images remain local and are served by the authenticated API file route"
+                )
                 result["rustfs_enabled"] = False
                 result["images_uploaded"] = False
                 result["images_local"] = True
@@ -139,7 +142,7 @@ class BaseOutputNormalizer:
 
         if not url_mapping:
             raise RuntimeError(
-                f"图片上传到 RustFS 未返回任何地址（应上传 {image_count} 张）。" "请检查 RustFS 服务状态与存储桶权限。"
+                f"图片上传到 RustFS 未返回任何地址（应上传 {image_count} 张）。请检查 RustFS 服务状态与存储桶权限。"
             )
 
         if result["markdown_file"]:

@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 MinerU Tianshu - SQLite Task Database Manager
 天枢任务数据库管理器
@@ -525,7 +526,7 @@ class TaskDB:
             if not success and status in ["completed", "failed"]:
                 from loguru import logger
 
-                logger.debug(f"Status update failed: task_id={task_id}, status={status}, " f"worker_id={worker_id}")
+                logger.debug(f"Status update failed: task_id={task_id}, status={status}, worker_id={worker_id}")
 
             # 通知 Redis 任务完成/失败（清理 processing set）
             if success and status in ["completed", "failed"]:

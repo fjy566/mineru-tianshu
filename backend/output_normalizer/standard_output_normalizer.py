@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 标准输出规范化器
 """
@@ -49,13 +50,6 @@ class StandardOutputNormalizer(BaseOutputNormalizer):
 
         查找并重命名为标准名称：result.md
         """
-        # 查找所有 .md 文件（递归）
-        md_files = list(output_dir.rglob("*.md"))
-
-        if not md_files:
-            logger.warning("⚠️  No markdown files found")
-            return None
-
         # 如果已经有 result.md，直接返回
         standard_md = output_dir / self.STANDARD_MARKDOWN_NAME
         if standard_md.exists():
@@ -65,6 +59,10 @@ class StandardOutputNormalizer(BaseOutputNormalizer):
         # 选择最大的 .md 文件（通常是主文件）
         main_md = output_dir / "content.md"
         if not main_md.is_file():
+            md_files = list(output_dir.rglob("*.md"))
+            if not md_files:
+                logger.warning("⚠️  No markdown files found")
+                return None
             main_md = max(md_files, key=lambda f: f.stat().st_size)
         logger.info(f"📄 Found main markdown: {main_md.relative_to(output_dir)}")
 
@@ -160,13 +158,6 @@ class StandardOutputNormalizer(BaseOutputNormalizer):
 
         查找并重命名为标准名称：result.json
         """
-        # 查找所有 .json 文件（排除子目录中的临时文件）
-        json_files = list(output_dir.rglob("*.json"))
-
-        if not json_files:
-            logger.info("ℹ️  No JSON files found")
-            return None
-
         # 如果已经有 result.json，直接返回
         standard_json = output_dir / self.STANDARD_JSON_NAME
         if standard_json.exists():
@@ -176,6 +167,10 @@ class StandardOutputNormalizer(BaseOutputNormalizer):
         # 主引擎的 content.json 优先于关键帧等辅助子目录的解析结果。
         main_json = output_dir / "content.json"
         if not main_json.is_file():
+            json_files = list(output_dir.rglob("*.json"))
+            if not json_files:
+                logger.info("ℹ️  No JSON files found")
+                return None
             ordered = sorted(json_files, key=lambda f: (len(f.relative_to(output_dir).parts), f.name))
             main_json = next((f for f in ordered if f.name.endswith("_content_list_v2.json")), None)
             if main_json is None:

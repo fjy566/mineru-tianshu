@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 import unittest
 
 from mineru_pipeline.ocr_gap_filler import (
@@ -21,14 +22,16 @@ class OcrGapFillerTests(unittest.TestCase):
         self.assertEqual(_clean_ocr_text(text), text)
 
     def test_deduplication_does_not_merge_different_math_symbols(self):
-        lines = [{"text": text, "bbox": (0, 0, .3, .1), "score": .9} for text in ("a+b", "a-b")]
+        lines = [{"text": text, "bbox": (0, 0, 0.3, 0.1), "score": 0.9} for text in ("a+b", "a-b")]
         self.assertEqual(len(_deduplicate_lines(lines)), 2)
 
     def test_engine_failure_is_audited_and_document_closed(self):
         from unittest.mock import patch, Mock
+
         doc = Mock()
-        with patch("pymupdf.open", return_value=doc), patch(
-            "mineru_pipeline.ocr_gap_filler._get_engine", side_effect=ImportError("missing")
+        with (
+            patch("pymupdf.open", return_value=doc),
+            patch("mineru_pipeline.ocr_gap_filler._get_engine", side_effect=ImportError("missing")),
         ):
             data = {"pages": []}
             audit = supplement_uncovered_pdf_text("unused.pdf", data)
@@ -42,9 +45,9 @@ class OcrGapFillerTests(unittest.TestCase):
 
     def test_deduplication_preserves_repeated_text_at_other_positions(self):
         lines = [
-            {"text": "heading", "bbox": (0, 0, .3, .1), "score": .8},
-            {"text": "heading", "bbox": (0, 0, .3, .1), "score": .9},
-            {"text": "heading", "bbox": (0, .5, .3, .6), "score": .9},
+            {"text": "heading", "bbox": (0, 0, 0.3, 0.1), "score": 0.8},
+            {"text": "heading", "bbox": (0, 0, 0.3, 0.1), "score": 0.9},
+            {"text": "heading", "bbox": (0, 0.5, 0.3, 0.6), "score": 0.9},
         ]
         self.assertEqual(len(_deduplicate_lines(lines)), 2)
 
@@ -52,12 +55,14 @@ class OcrGapFillerTests(unittest.TestCase):
         class Result:
             boxes = [[[10, 10], [90, 10], [90, 20], [10, 20]]]
             txts = ["普通图片文字"]
-            scores = [.95]
+            scores = [0.95]
+
         self.assertEqual(len(_image_text_candidates(Result(), 100, 100, [(0, 0, 1, 1)])), 1)
 
     def test_large_page_render_is_bounded(self):
         from types import SimpleNamespace
         from unittest.mock import Mock
+
         page = Mock(rect=SimpleNamespace(width=100000, height=100000))
         _render_page(page, 3.5)
         matrix = page.get_pixmap.call_args.kwargs["matrix"]
@@ -69,6 +74,7 @@ class OcrGapFillerTests(unittest.TestCase):
         from pathlib import Path
         from unittest.mock import patch, Mock
         from types import SimpleNamespace
+
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "test.pdf"
             with pymupdf.open() as doc:
@@ -76,8 +82,12 @@ class OcrGapFillerTests(unittest.TestCase):
                 doc.new_page()
                 doc.save(source)
             original = "def x():\n    return 1  # 滤皮"
-            data = {"pages": [{"page_idx": 0, "blocks": [{"type": "text", "content": original}]},
-                              {"page_idx": 1, "blocks": []}]}
+            data = {
+                "pages": [
+                    {"page_idx": 0, "blocks": [{"type": "text", "content": original}]},
+                    {"page_idx": 1, "blocks": []},
+                ]
+            }
             engine = Mock(side_effect=[RuntimeError("injected failure"), SimpleNamespace(boxes=[], txts=[], scores=[])])
             with patch("mineru_pipeline.ocr_gap_filler._get_engine", return_value=engine):
                 audit = supplement_uncovered_pdf_text(source, data)
@@ -96,9 +106,7 @@ class OcrGapFillerTests(unittest.TestCase):
         covered = [(0.4, 0.1, 0.95, 0.5)]
         candidate_box = (0.5, 0.2, 0.9, 0.24)
 
-        self.assertEqual(
-            _normalized_ocr_lines(Result(), 100, 100, covered, []), []
-        )
+        self.assertEqual(_normalized_ocr_lines(Result(), 100, 100, covered, []), [])
         refined = _normalized_ocr_lines(
             Result(), 100, 100, covered, [], allowed_overlaps=[candidate_box], minimum_score=0.8
         )
@@ -160,8 +168,7 @@ class OcrGapFillerTests(unittest.TestCase):
 
     def test_insertions_skip_nested_footnote_indices_and_shift_later_blocks(self):
         blocks = [
-            {"index": index, "type": "text", "bbox": [0.1, index / 100, 0.5, (index + 1) / 100]}
-            for index in range(7)
+            {"index": index, "type": "text", "bbox": [0.1, index / 100, 0.5, (index + 1) / 100]} for index in range(7)
         ]
         blocks.append(
             {

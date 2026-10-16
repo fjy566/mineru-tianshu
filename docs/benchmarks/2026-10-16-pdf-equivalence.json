@@ -1,0 +1,50 @@
+{
+  "baseline": "4ded210",
+  "scope": "same MinerU inference, actual RapidOCR before/after",
+  "results": [
+    {
+      "sample": "native.pdf",
+      "equal_middle": true,
+      "equal_markdown": true,
+      "equal_content_list": true,
+      "equal_structured": true,
+      "equal_audit": true,
+      "pages": 2,
+      "added_rows": 0,
+      "sha256": "6619b9b29aad89eef1d15c37a0ca5c4f92907dbf9395147789e307a2ce9f44af"
+    },
+    {
+      "sample": "scanned.pdf",
+      "equal_middle": true,
+      "equal_markdown": true,
+      "equal_content_list": true,
+      "equal_structured": true,
+      "equal_audit": true,
+      "pages": 1,
+      "added_rows": 0,
+      "sha256": "719bab2b62ef480d7e0d5ac4df33f1a733bbf4a3950ef999cf9e6b69d78896ca"
+    },
+    {
+      "sample": "mixed.pdf",
+      "equal_middle": true,
+      "equal_markdown": true,
+      "equal_content_list": true,
+      "equal_structured": true,
+      "equal_audit": true,
+      "pages": 2,
+      "added_rows": 0,
+      "sha256": "9eeb33a58204650db45b4ef311bca116f8ac429db0463449113ab8eabe2e4c17"
+    },
+    {
+      "sample": "forced-gap.pdf",
+      "equal_middle": true,
+      "equal_markdown": true,
+      "equal_content_list": true,
+      "equal_structured": true,
+      "equal_audit": true,
+      "pages": 2,
+      "added_rows": 7,
+      "sha256": "1bd94500948bcd71493ced725bbc000dbf75a7b0d12c1e127edb50b12108dd05"
+    }
+  ]
+}

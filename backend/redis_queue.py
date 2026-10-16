@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 MinerU Tianshu - Redis Task Queue
 天枢 Redis 任务队列
@@ -471,9 +472,7 @@ def get_redis_queue() -> Optional[RedisTaskQueue]:
         try:
             _queue_instance = RedisTaskQueue()
             if _queue_instance.is_available():
-                logger.info(
-                    f"✅ Redis queue connected: " f"{_queue_instance.config.host}:{_queue_instance.config.port}"
-                )
+                logger.info(f"✅ Redis queue connected: {_queue_instance.config.host}:{_queue_instance.config.port}")
             else:
                 logger.warning("⚠️  Redis queue not available, falling back to SQLite")
                 _queue_instance = False  # 标记为已检查且不可用

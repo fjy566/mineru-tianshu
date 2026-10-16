@@ -1,3 +1,4 @@
+<!-- Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu. -->
 <template>
   <!-- 完全使用 Scalar 自身样式，不添加额外包装 -->
   <div class="scalar-container">

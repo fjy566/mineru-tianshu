@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """通过 MinerU 4 的公共解析和渲染接口生成天枢约定的结果文件。"""
 
 import json
@@ -63,17 +64,19 @@ def do_parse(
         result.save(FileBasedDataWriter(str(destination)))
         (destination / "markdown.md").replace(destination / "result.md")
         middle_path = destination / "middle_json.json"
-        middle_data = json.loads(middle_path.read_text(encoding="utf-8"))
+        middle_text = middle_path.read_text(encoding="utf-8")
+        middle_data = json.loads(middle_text)
         audit = None
         if source.suffix.lower() == ".pdf":
             audit = supplement_uncovered_pdf_text(source, middle_data)
             (destination / "ocr_audit.json").write_text(
                 json.dumps(audit, ensure_ascii=False, indent=2), encoding="utf-8"
             )
-            middle_path.write_text(json.dumps(middle_data, ensure_ascii=False, indent=2), encoding="utf-8")
+            middle_text = json.dumps(middle_data, ensure_ascii=False, indent=2)
+            middle_path.write_text(middle_text, encoding="utf-8")
 
         # 统一从补录后的中间结果生成 Markdown 和结构化输出，确保页面、图片和文字一致。
-        exported = ParseResult.from_json(middle_path.read_text(encoding="utf-8"))
+        exported = ParseResult.from_json(middle_text)
         markdown = render_markdown(exported.middle_json, mode=RenderMode.FULL)
         if audit and audit["status"] in {"partial", "failed"}:
             markdown = (

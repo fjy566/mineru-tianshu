@@ -1,3 +1,4 @@
+<!-- Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu. -->
 <template>
   <div class="relative w-full h-full flex flex-col bg-gray-200/80 overflow-hidden">
     <div v-if="loading || processing" class="absolute top-0 left-0 w-full h-1 bg-gray-200 z-50">

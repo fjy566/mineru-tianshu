@@ -1,0 +1,31 @@
+{
+  "baseline": "4ded210",
+  "python": "3.12.3",
+  "scope": "postprocessing microbenchmarks, not total inference speed",
+  "results": [
+    {
+      "case": "ocr_1500_unique_texts",
+      "equal_output": true,
+      "repeats": 5,
+      "baseline_median_ms": 2006.6460999996707,
+      "optimized_median_ms": 2.008600000408478,
+      "speedup": 999.0272326952056
+    },
+    {
+      "case": "ocr_1500_repeated_texts_50_families",
+      "equal_output": true,
+      "repeats": 5,
+      "baseline_median_ms": 1986.530700000003,
+      "optimized_median_ms": 23.854000000028464,
+      "speedup": 83.27872474208236
+    },
+    {
+      "case": "canonical_outputs_with_2000_aux_files",
+      "equal_output": true,
+      "repeats": 5,
+      "baseline_median_ms": 23.237000000335684,
+      "optimized_median_ms": 0.2710999997361796,
+      "speedup": 85.71375884525534
+    }
+  ]
+}

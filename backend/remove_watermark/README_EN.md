@@ -180,11 +180,7 @@ If default model doesn't work well, train your own YOLO model:
 from watermark_remover import WatermarkRemover
 
 # Use custom model
-remover = WatermarkRemover(
-    model_path="/path/to/your/custom_model.pt",
-    device="cuda",
-    use_lama=True
-)
+remover = WatermarkRemover(model_path="/path/to/your/custom_model.pt", device="cuda", use_lama=True)
 ```
 
 #### Option 2: Batch Test to Find Best Parameters
@@ -199,10 +195,7 @@ dilations = [5, 10, 15, 20]
 # Batch test
 for conf, dil in itertools.product(confidences, dilations):
     result = remover.remove_watermark(
-        image_path="test.jpg",
-        output_path=f"result_c{conf}_d{dil}.jpg",
-        conf_threshold=conf,
-        dilation=dil
+        image_path="test.jpg", output_path=f"result_c{conf}_d{dil}.jpg", conf_threshold=conf, dilation=dil
     )
 ```
 
@@ -258,8 +251,8 @@ from remove_watermark import WatermarkRemover
 
 # Initialize
 remover = WatermarkRemover(
-    device="cuda",        # Use GPU (or "cpu")
-    use_lama=True        # Use LaMa inpainting
+    device="cuda",  # Use GPU (or "cpu")
+    use_lama=True,  # Use LaMa inpainting
 )
 
 # Remove image watermark
@@ -267,7 +260,7 @@ result = remover.remove_watermark(
     image_path="input.png",
     output_path="output.png",
     conf_threshold=0.35,  # Detection confidence
-    dilation=10          # Mask dilation
+    dilation=10,  # Mask dilation
 )
 
 # Cleanup resources

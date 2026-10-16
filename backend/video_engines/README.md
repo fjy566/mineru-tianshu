@@ -89,11 +89,11 @@ engine = get_engine()
 
 # 处理视频
 result = engine.parse(
-    video_path='path/to/video.mp4',
-    output_path='output_dir',
-    language='auto',  # 自动检测语言
-    use_itn=True,     # 启用数字归一化
-    keep_audio=False  # 不保留临时音频文件
+    video_path="path/to/video.mp4",
+    output_path="output_dir",
+    language="auto",  # 自动检测语言
+    use_itn=True,  # 启用数字归一化
+    keep_audio=False,  # 不保留临时音频文件
 )
 
 # 获取结果
@@ -107,9 +107,9 @@ print(f"内容: {result['markdown']}")
 ```python
 # 如果只需要提取音频
 audio_path = engine.extract_audio(
-    video_path='video.mp4',
-    output_path='audio.wav',  # 可选
-    audio_format='wav'        # wav/mp3/aac
+    video_path="video.mp4",
+    output_path="audio.wav",  # 可选
+    audio_format="wav",  # wav/mp3/aac
 )
 
 print(f"音频已保存: {audio_path}")
@@ -119,7 +119,7 @@ print(f"音频已保存: {audio_path}")
 
 ```python
 # 获取视频元信息
-info = engine.get_video_info('video.mp4')
+info = engine.get_video_info("video.mp4")
 print(f"时长: {info['format']['duration']} 秒")
 print(f"大小: {info['format']['size']} 字节")
 ```
@@ -148,13 +148,13 @@ print(f"大小: {info['format']['size']} 字节")
 
 ```python
 {
-    'success': True,
-    'output_path': 'output_dir',
-    'markdown': '# 转写内容...',
-    'markdown_file': 'output_dir/video.md',
-    'json_file': 'output_dir/video.json',
-    'json_data': {...},  # 结构化数据
-    'result': {...}      # 原始 SenseVoice 结果
+    "success": True,
+    "output_path": "output_dir",
+    "markdown": "# 转写内容...",
+    "markdown_file": "output_dir/video.md",
+    "json_file": "output_dir/video.json",
+    "json_data": {...},  # 结构化数据
+    "result": {...},  # 原始 SenseVoice 结果
 }
 ```
 
@@ -340,6 +340,7 @@ FFmpeg 使用以下参数优化语音识别效果：
 from backend.video_engines import get_engine
 from pathlib import Path
 
+
 def process_video(video_path: str):
     """处理视频文件"""
     # 初始化引擎
@@ -350,16 +351,11 @@ def process_video(video_path: str):
         raise RuntimeError("FFmpeg 未安装")
 
     # 创建输出目录
-    output_dir = Path('output') / Path(video_path).stem
+    output_dir = Path("output") / Path(video_path).stem
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 处理视频
-    result = engine.parse(
-        video_path=video_path,
-        output_path=str(output_dir),
-        language='auto',
-        use_itn=True
-    )
+    result = engine.parse(video_path=video_path, output_path=str(output_dir), language="auto", use_itn=True)
 
     # 打印结果
     print(f"✅ 处理完成!")
@@ -368,10 +364,11 @@ def process_video(video_path: str):
 
     return result
 
+
 # 使用示例
-if __name__ == '__main__':
-    result = process_video('example.mp4')
-    print(result['markdown'])
+if __name__ == "__main__":
+    result = process_video("example.mp4")
+    print(result["markdown"])
 ```
 
 ### 批量处理
@@ -379,6 +376,7 @@ if __name__ == '__main__':
 ```python
 from backend.video_engines import get_engine
 from pathlib import Path
+
 
 def batch_process_videos(video_dir: str):
     """批量处理视频文件"""
@@ -388,7 +386,7 @@ def batch_process_videos(video_dir: str):
     # 查找所有视频文件
     video_files = []
     for ext in engine.SUPPORTED_FORMATS:
-        video_files.extend(video_dir.glob(f'*{ext}'))
+        video_files.extend(video_dir.glob(f"*{ext}"))
 
     print(f"找到 {len(video_files)} 个视频文件")
 
@@ -397,10 +395,7 @@ def batch_process_videos(video_dir: str):
     for video_file in video_files:
         print(f"处理: {video_file.name}")
         try:
-            result = engine.parse(
-                video_path=str(video_file),
-                output_path=f'output/{video_file.stem}'
-            )
+            result = engine.parse(video_path=str(video_file), output_path=f"output/{video_file.stem}")
             results.append(result)
             print(f"✅ {video_file.name} 完成")
         except Exception as e:
@@ -408,8 +403,9 @@ def batch_process_videos(video_dir: str):
 
     return results
 
+
 # 使用示例
-batch_process_videos('videos/')
+batch_process_videos("videos/")
 ```
 
 ## 集成到 API Server

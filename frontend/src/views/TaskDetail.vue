@@ -1,3 +1,4 @@
+<!-- Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu. -->
 <template>
   <div class="h-[calc(100vh-4rem)] lg:h-[calc(100vh-5rem)] flex flex-col">
     <div class="flex items-center justify-between mb-4 px-1 flex-shrink-0">

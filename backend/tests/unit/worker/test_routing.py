@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 import importlib
 import sys
 import types
@@ -54,6 +55,7 @@ def test_external_vllm_url_does_not_trigger_local_container_start(monkeypatch, m
     worker = make_worker(worker_module, mocker)
     source = tmp_path / "document.pdf"
     import pymupdf
+
     with pymupdf.open() as doc:
         doc.new_page()
         doc.save(source)
@@ -82,6 +84,7 @@ def test_local_vllm_backend_starts_container_and_pdf_split_short_circuits(monkey
     worker = make_worker(worker_module, mocker)
     source = tmp_path / "document.pdf"
     import pymupdf
+
     with pymupdf.open() as doc:
         doc.new_page()
         doc.save(source)
@@ -118,6 +121,7 @@ def test_worker_failure_marks_task_failed_and_enqueues_one_failure_webhook(monke
     worker._process_with_mineru.side_effect = RuntimeError("engine failure")
     source = tmp_path / "document.pdf"
     import pymupdf
+
     with pymupdf.open() as doc:
         doc.new_page()
         doc.save(source)

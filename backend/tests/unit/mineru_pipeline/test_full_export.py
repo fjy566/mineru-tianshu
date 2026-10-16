@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """实际 MinerU 4 中间数据导出：页眉不应导致空文档。"""
 
 import json

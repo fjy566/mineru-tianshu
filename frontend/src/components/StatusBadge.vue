@@ -1,3 +1,4 @@
+<!-- Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu. -->
 <template>
   <span :class="badgeClass" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
     <span :class="dotClass" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>

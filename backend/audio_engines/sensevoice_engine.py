@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 SenseVoice 语音识别引擎
 基于阿里达摩院的 SenseVoiceSmall 模型

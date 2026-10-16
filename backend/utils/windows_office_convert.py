@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """Windows 原生旧版 Office 转换；在独立进程内运行，受 Worker 超时限制。"""
 
 import sys

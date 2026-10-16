@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 MinerU Tianshu - API Server
 天枢 API 服务器
@@ -387,7 +388,10 @@ async def submit_task(
 
         if watermark_keywords:
             import re
-            options["watermark_keywords"] = [word.strip() for word in re.split(r"[,，\n]+", watermark_keywords) if word.strip()]
+
+            options["watermark_keywords"] = [
+                word.strip() for word in re.split(r"[,，\n]+", watermark_keywords) if word.strip()
+            ]
         if webhook_url:
             options["webhook_url"] = webhook_url
 
@@ -1106,7 +1110,11 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
             }
         )
 
-    if importlib.util.find_spec("video_engines") is not None and importlib.util.find_spec("funasr") is not None and __import__("shutil").which("ffmpeg"):
+    if (
+        importlib.util.find_spec("video_engines") is not None
+        and importlib.util.find_spec("funasr") is not None
+        and __import__("shutil").which("ffmpeg")
+    ):
         engines["video"].append(
             {
                 "name": "video",

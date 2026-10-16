@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 视频处理引擎
 基于 FFmpeg + SenseVoice + OCR
@@ -278,8 +279,21 @@ class VideoProcessingEngine:
 
             # 无音轨的视频仍可提取关键帧；音频保存在当前任务目录中。
             probe = subprocess.run(
-                ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
-                 "-of", "json", str(video_path)], capture_output=True, text=True, timeout=30,
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "a",
+                    "-show_entries",
+                    "stream=index",
+                    "-of",
+                    "json",
+                    str(video_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if probe.returncode != 0:
                 raise ValueError("视频无法读取，请检查文件是否完整")
@@ -295,8 +309,10 @@ class VideoProcessingEngine:
                 )
             else:
                 enable_keyframe_ocr = True
-                audio_result = {"markdown": "# 视频解析\n\n未检测到音轨，已使用关键帧文字识别。\n",
-                                "json_data": {"segments": [], "metadata": {"audio_present": False}}}
+                audio_result = {
+                    "markdown": "# 视频解析\n\n未检测到音轨，已使用关键帧文字识别。\n",
+                    "json_data": {"segments": [], "metadata": {"audio_present": False}},
+                }
 
             # 步骤 3: 关键帧OCR（可选）
             keyframe_result = None

@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 GenBank Format Engine - GenBank 格式解析引擎
 
@@ -50,7 +51,7 @@ class GenBankEngine(FormatEngine):
         except ImportError as e:
             self.logger.error("❌ BioPython is required for GenBank parsing")
             raise ImportError(
-                "BioPython is required for GenBank format support. " "Install it with: pip install biopython>=1.80"
+                "BioPython is required for GenBank format support. Install it with: pip install biopython>=1.80"
             ) from e
 
     def parse(self, file_path: str, options: Optional[Dict] = None) -> Dict:

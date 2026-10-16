@@ -44,7 +44,40 @@
 
 ---
 
-## 📝 最新更新
+## 本 fork：原作者、改动与开发部署
+
+本仓库 [fjy566/mineru-tianshu](https://github.com/fjy566/mineru-tianshu) 是
+[magicyuan876/mineru-tianshu](https://github.com/magicyuan876/mineru-tianshu) 的 fork。
+**原项目作者为 magicyuan876 及 MinerU Tianshu Contributors；fjy566 维护此 fork 的增量修改。**
+保留原作者署名、Git 历史、上游链接及原始 [Apache License 2.0](LICENSE)，不将原项目作为本 fork 的原创作品。
+第三方引擎、依赖和模型继续适用各自许可证。
+
+### 2026-10-16 fork 更新
+
+- 原生 Windows 开发部署：MinerU 4.0.12、RapidOCR 通用逐页补漏、PowerShell 7.6 启动/停止脚本，前端 Vite 热更新。
+- 可用性修复：PDF 选页定位与完整 Markdown、FASTQ 路由、旧 Office 转换、音视频输出、Logo 本地上传、任务操作、登录退出和 MCP SSE。
+- 模块解耦：转换分发独立于 Worker 生命周期；OCR 几何处理独立于模型调用；Markdown 渲染独立于 Vue 组件和鉴权图片链接。
+- 等价性能优化：OCR 同文分桶去重、复用候选坐标、标准输出路径快速定位、复用已净化的 Markdown HTML。
+- **准确率约束**：保留模型、推理档位、精度、OCR 分辨率、置信度、逐页检查及补漏；不通过减少识别步骤换取速度。
+
+本机后处理基准：1500 条不同文本的去重中位耗时约 `2007 → 2.01 ms`；50 类重复文本约 `1987 → 23.85 ms`；含 2000 个辅助文件的标准结果定位约 `23.24 → 0.27 ms`。
+这些是特定样本的局部处理收益，**不代表完整文档解析有同等倍数提速**。详见 [性能与等价性说明](docs/PERFORMANCE_2026-10-16.md)。
+
+### 原生开发入口
+
+本 fork 在 Windows 上优先使用 Python 3.12、Node.js 22.12+ 和 PowerShell 7.6 开发部署。
+环境与模型准备见 [Windows 开发说明](docs/WINDOWS_MINERU4.md)，随后在仓库目录执行：
+
+```powershell
+& './启动天枢开发版.ps1'
+# 前端：http://127.0.0.1:3000；修改 frontend/src 自动热更新
+# 停止：& './停止天枢开发版.ps1'
+```
+
+开发验证：后端 `python -m pytest backend/tests -q`；前端进入 `frontend` 后执行 `npm test`、`npm run build`。
+修改范围与限制见 [FORK_CHANGES.md](FORK_CHANGES.md)。下方保留上游项目介绍和更新记录；上游预构建镜像不包含本 fork 的增量代码。
+
+## 📝 上游最新更新
 
 ### 2026-10-16 🚀 v2.2.1：发布预构建 Docker 镜像
 

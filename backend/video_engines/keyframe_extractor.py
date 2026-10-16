@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 关键帧提取引擎
 场景检测 → 质量过滤 → 图像去重 → OCR
@@ -292,7 +293,7 @@ class VideoOCREngine:
 
             results = []
             for idx, kf in enumerate(keyframes):
-                logger.info(f"   处理 {idx+1}/{len(keyframes)}: {Path(kf.image_path).name}")
+                logger.info(f"   处理 {idx + 1}/{len(keyframes)}: {Path(kf.image_path).name}")
 
                 try:
                     # 调用 OCR 引擎

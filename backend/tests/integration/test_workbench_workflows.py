@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """工作台主要按钮对应的 API 流程；全部使用临时目录和临时数据库。"""
 
 import pytest
@@ -53,32 +54,38 @@ def test_profile_user_and_token_lifecycle(workbench):
 
 def test_registration_password_change_and_logout(workbench):
     _, client, admin_headers = workbench
-    assert client.post(
-        "/api/v1/auth/system/config", json={"allow_registration": True}, headers=admin_headers
-    ).status_code == 200
-    credentials = {"username": "qa-registration", "password": "qa-old-password"}
-    registered = client.post(
-        "/api/v1/auth/register", json={**credentials, "email": "qa-registration@example.com"}
+    assert (
+        client.post("/api/v1/auth/system/config", json={"allow_registration": True}, headers=admin_headers).status_code
+        == 200
     )
+    credentials = {"username": "qa-registration", "password": "qa-old-password"}
+    registered = client.post("/api/v1/auth/register", json={**credentials, "email": "qa-registration@example.com"})
     assert registered.status_code == 201
     assert registered.json()["role"] == "user"
-    assert client.post(
-        "/api/v1/auth/register", json={**credentials, "email": "qa-registration@example.com"}
-    ).status_code == 400
-    assert client.post(
-        "/api/v1/auth/login", json={**credentials, "password": "wrong-password"}
-    ).status_code == 401
+    assert (
+        client.post("/api/v1/auth/register", json={**credentials, "email": "qa-registration@example.com"}).status_code
+        == 400
+    )
+    assert client.post("/api/v1/auth/login", json={**credentials, "password": "wrong-password"}).status_code == 401
     login = client.post("/api/v1/auth/login", json=credentials)
     assert login.status_code == 200
     headers = {"Authorization": "Bearer " + login.json()["access_token"]}
-    assert client.post(
-        "/api/v1/auth/me/change-password",
-        json={"old_password": "wrong-password", "new_password": "qa-new-password"}, headers=headers
-    ).status_code == 400
-    assert client.post(
-        "/api/v1/auth/me/change-password",
-        json={"old_password": credentials["password"], "new_password": "qa-new-password"}, headers=headers
-    ).status_code == 200
+    assert (
+        client.post(
+            "/api/v1/auth/me/change-password",
+            json={"old_password": "wrong-password", "new_password": "qa-new-password"},
+            headers=headers,
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/me/change-password",
+            json={"old_password": credentials["password"], "new_password": "qa-new-password"},
+            headers=headers,
+        ).status_code
+        == 200
+    )
     assert client.get("/api/v1/auth/me", headers=headers).status_code == 401
     assert client.post("/api/v1/auth/login", json=credentials).status_code == 401
     login = client.post("/api/v1/auth/login", json={**credentials, "password": "qa-new-password"})

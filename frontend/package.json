@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --no-experimental-webstorage node_modules/vitest/vitest.mjs run",
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -12,10 +13,12 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "autoprefixer": "^10.4.21",
+    "jsdom": "26.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.1",
     "typescript": "~5.9.3",
     "vite": "^7.1.7",
+    "vitest": "3.2.4",
     "vue-tsc": "^3.3.13"
   },
   "dependencies": {

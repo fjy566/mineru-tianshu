@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 Internationalization (i18n) Module for Format Engines
 国际化模块 - 支持多语言语义描述生成
@@ -441,10 +442,10 @@ class SemanticGenerator:
         aromaticity = analysis.get("aromaticity", 0)
         if aromaticity > 0.15:
             if self.lang == Language.ZH:
-                parts.append(f"高芳香性（{aromaticity*100:.1f}%），可能包含重要的芳香族残基簇")
+                parts.append(f"高芳香性（{aromaticity * 100:.1f}%），可能包含重要的芳香族残基簇")
             else:
                 parts.append(
-                    f"High aromaticity ({aromaticity*100:.1f}%), may contain important aromatic residue clusters"
+                    f"High aromaticity ({aromaticity * 100:.1f}%), may contain important aromatic residue clusters"
                 )
 
         # 潜在修饰位点（增强）

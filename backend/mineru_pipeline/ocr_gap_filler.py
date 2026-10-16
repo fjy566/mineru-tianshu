@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """补录 MinerU PDF 解析结果中未被任何版面块覆盖的 OCR 文字。"""
 
 from __future__ import annotations
@@ -5,12 +6,22 @@ from __future__ import annotations
 import os
 import math
 import copy
-import re
 import threading
 from pathlib import Path
 from typing import Any
 
 from loguru import logger
+
+from .ocr_geometry import (
+    _clean_ocr_text as _clean_ocr_text,
+    _covered_bboxes as _covered_bboxes,
+    _covered_ratio as _covered_ratio,
+    _deduplicate_lines as _deduplicate_lines,
+    _line_bboxes as _line_bboxes,
+    _normalized_text as _normalized_text,
+    _overlap_ratio as _overlap_ratio,
+    _valid_bbox as _valid_bbox,
+)
 
 
 _ENGINE: Any | None = None
@@ -42,106 +53,6 @@ def _get_engine():
     return _ENGINE
 
 
-def _valid_bbox(value: Any) -> tuple[float, float, float, float] | None:
-    if not isinstance(value, (list, tuple)) or len(value) != 4:
-        return None
-    try:
-        x0, y0, x1, y1 = (float(part) for part in value)
-    except (TypeError, ValueError):
-        return None
-    if not all(math.isfinite(v) for v in (x0, y0, x1, y1)) or x1 <= x0 or y1 <= y0:
-        return None
-    return x0, y0, x1, y1
-
-
-def _covered_bboxes(blocks: list[dict[str, Any]]) -> list[tuple[float, float, float, float]]:
-    """Collect all block and nested caption/footnote boxes in normalized page units."""
-    boxes: list[tuple[float, float, float, float]] = []
-
-    def visit(value: Any) -> None:
-        if isinstance(value, dict):
-            bbox = _valid_bbox(value.get("bbox"))
-            if bbox:
-                boxes.append(bbox)
-            for key, child in value.items():
-                if key != "bbox":
-                    visit(child)
-        elif isinstance(value, list):
-            for child in value:
-                visit(child)
-
-    visit(blocks)
-    return boxes
-
-
-def _covered_ratio(bbox: tuple[float, float, float, float], covered: list[tuple[float, float, float, float]]) -> float:
-    x0, y0, x1, y1 = bbox
-    area = (x1 - x0) * (y1 - y0)
-    if area <= 0:
-        return 1.0
-    max_intersection = 0.0
-    for bx0, by0, bx1, by1 in covered:
-        width = max(0.0, min(x1, bx1) - max(x0, bx0))
-        height = max(0.0, min(y1, by1) - max(y0, by0))
-        max_intersection = max(max_intersection, width * height)
-    return max_intersection / area
-
-
-def _normalized_text(text: str) -> str:
-    return re.sub(r"[\s\W_]+", "", text, flags=re.UNICODE).lower()
-
-
-def _clean_ocr_text(text: str) -> str:
-    """仅清理新增 OCR 行的首尾空白，不猜测或改写原文。"""
-    return text.strip()
-
-
-def _line_bboxes(result: Any, width: int, height: int) -> list[dict[str, Any]]:
-    """Return valid OCR candidates with normalized geometry and confidence."""
-    boxes = getattr(result, "boxes", None)
-    texts = getattr(result, "txts", None)
-    scores = getattr(result, "scores", None)
-    if boxes is None or texts is None or scores is None:
-        return []
-
-    candidates = []
-    for polygon, text, score in zip(boxes, texts, scores):
-        text = _clean_ocr_text(str(text))
-        if not text:
-            continue
-        try:
-            score = float(score)
-            points = [(float(point[0]), float(point[1])) for point in polygon]
-        except (TypeError, ValueError, IndexError):
-            continue
-        if not points or not math.isfinite(score) or not all(math.isfinite(v) for point in points for v in point):
-            continue
-        bbox = (
-            max(0.0, min(x for x, _ in points) / width),
-            max(0.0, min(y for _, y in points) / height),
-            min(1.0, max(x for x, _ in points) / width),
-            min(1.0, max(y for _, y in points) / height),
-        )
-        if _valid_bbox(bbox) is None:
-            continue
-        candidates.append({"text": text, "bbox": bbox, "score": score})
-    return candidates
-
-
-def _overlap_ratio(
-    bbox: tuple[float, float, float, float], other: tuple[float, float, float, float]
-) -> float:
-    x0, y0, x1, y1 = bbox
-    area = (x1 - x0) * (y1 - y0)
-    if area <= 0:
-        return 0.0
-    ox0, oy0, ox1, oy1 = other
-    intersection = max(0.0, min(x1, ox1) - max(x0, ox0)) * max(
-        0.0, min(y1, oy1) - max(y0, oy0)
-    )
-    return intersection / area
-
-
 def _existing_texts(blocks: list[dict[str, Any]]) -> list[str]:
     texts: list[str] = []
 
@@ -168,19 +79,16 @@ def _normalized_ocr_lines(
     existing_texts: list[str],
     allowed_overlaps: list[tuple[float, float, float, float]] | None = None,
     minimum_score: float = _MIN_TEXT_SCORE,
+    *,
+    candidates: list[dict[str, Any]] | None = None,
 ):
     lines = []
-    for candidate in _line_bboxes(result, width, height):
+    for candidate in candidates if candidates is not None else _line_bboxes(result, width, height):
         bbox = candidate["bbox"]
         if candidate["score"] < minimum_score:
             continue
-        overlaps_candidate = any(
-            _overlap_ratio(bbox, other) >= 0.25 for other in (allowed_overlaps or [])
-        )
-        if (
-            _covered_ratio(bbox, covered) >= _MAX_COVERED_LINE_RATIO
-            and not overlaps_candidate
-        ):
+        overlaps_candidate = any(_overlap_ratio(bbox, other) >= 0.25 for other in (allowed_overlaps or []))
+        if _covered_ratio(bbox, covered) >= _MAX_COVERED_LINE_RATIO and not overlaps_candidate:
             continue
         lines.append(candidate)
     return lines
@@ -191,9 +99,11 @@ def _image_text_candidates(
     width: int,
     height: int,
     image_boxes: list[tuple[float, float, float, float]],
+    *,
+    candidates: list[dict[str, Any]] | None = None,
 ) -> list[tuple[float, float, float, float]]:
-    candidates = []
-    for item in _line_bboxes(result, width, height):
+    selected = []
+    for item in candidates if candidates is not None else _line_bboxes(result, width, height):
         bbox = item["bbox"]
         normalized = _normalized_text(item["text"])
         if (
@@ -201,8 +111,8 @@ def _image_text_candidates(
             and len(normalized) >= 2
             and any(_covered_ratio(bbox, [image_box]) >= _MAX_COVERED_LINE_RATIO for image_box in image_boxes)
         ):
-            candidates.append(bbox)
-    return candidates
+            selected.append(bbox)
+    return selected
 
 
 def _group_lines_into_rows(lines: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
@@ -312,24 +222,10 @@ def _insert_by_page_position(blocks: list[dict[str, Any]], new_blocks: list[dict
         blocks.insert(insert_at, new_block)
 
 
-def _deduplicate_lines(lines: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """仅合并同一位置的同文候选，保留其他位置的重复标题。"""
-    kept = []
-    for line in sorted(lines, key=lambda item: item["score"], reverse=True):
-        if any(
-            re.sub(r"\s+", "", line["text"]).casefold() == re.sub(r"\s+", "", old["text"]).casefold()
-            and min(_overlap_ratio(line["bbox"], old["bbox"]),
-                    _overlap_ratio(old["bbox"], line["bbox"])) >= 0.5
-            for old in kept
-        ):
-            continue
-        kept.append(line)
-    return kept
-
-
 def _render_page(page, scale):
     """限制单页栅格尺寸，防止工程图等超大页面耗尽内存。"""
     import pymupdf as fitz
+
     width, height = page.rect.width, page.rect.height
     if width <= 0 or height <= 0:
         raise ValueError("PDF 页面尺寸无效")
@@ -340,6 +236,7 @@ def _render_page(page, scale):
 def _text_coverage(blocks):
     """图片本身不表示其文字已提取；图片标题和脚注仍属于已有文字。"""
     boxes = []
+
     def visit(value):
         if isinstance(value, dict):
             bbox = _valid_bbox(value.get("bbox"))
@@ -351,14 +248,21 @@ def _text_coverage(blocks):
         elif isinstance(value, list):
             for child in value:
                 visit(child)
+
     visit(blocks)
     return boxes
 
 
 def supplement_uncovered_pdf_text(pdf_path: Path, middle_data: dict[str, Any]) -> dict[str, Any]:
     """逐页补漏；失败保留原解析，并在所有输出的审计记录中明确标记。"""
-    audit = {"enabled": _enabled(), "engine": "RapidOCR", "pages": [], "added_rows": 0,
-             "page_results": [], "status": "disabled"}
+    audit = {
+        "enabled": _enabled(),
+        "engine": "RapidOCR",
+        "pages": [],
+        "added_rows": 0,
+        "page_results": [],
+        "status": "disabled",
+    }
     middle_data.setdefault("extensions", {})["tian_shu_ocr_backfill"] = audit
     if not audit["enabled"]:
         return audit
@@ -366,12 +270,16 @@ def supplement_uncovered_pdf_text(pdf_path: Path, middle_data: dict[str, Any]) -
     try:
         import pymupdf as fitz
         import numpy as np
+
         document = fitz.open(str(pdf_path))
         engine = _get_engine()
         audit["status"] = "completed"
         for original in middle_data.get("pages", []):
-            record = {"page_idx": original.get("page_idx") if isinstance(original, dict) else None,
-                      "status": "failed", "added_rows": 0}
+            record = {
+                "page_idx": original.get("page_idx") if isinstance(original, dict) else None,
+                "status": "failed",
+                "added_rows": 0,
+            }
             audit["page_results"].append(record)
             try:
                 # 在副本上工作，失败时不留下部分修改。
@@ -389,26 +297,44 @@ def supplement_uncovered_pdf_text(pdf_path: Path, middle_data: dict[str, Any]) -
                     result = engine(image)
                 covered = _covered_bboxes(blocks)
                 text_covered = _text_coverage(blocks)
-                image_boxes = [bbox for block in blocks if isinstance(block, dict)
-                               and block.get("type") == "image"
-                               and (bbox := _valid_bbox(block.get("bbox"))) is not None]
-                lines = _normalized_ocr_lines(result, pixmap.width, pixmap.height, covered, [])
-                image_candidates = [bbox for bbox in _image_text_candidates(
-                    result, pixmap.width, pixmap.height, image_boxes
-                ) if _covered_ratio(bbox, text_covered) < _MAX_COVERED_LINE_RATIO]
+                image_boxes = [
+                    bbox
+                    for block in blocks
+                    if isinstance(block, dict)
+                    and block.get("type") == "image"
+                    and (bbox := _valid_bbox(block.get("bbox"))) is not None
+                ]
+                candidates = _line_bboxes(result, pixmap.width, pixmap.height)
+                lines = _normalized_ocr_lines(result, pixmap.width, pixmap.height, covered, [], candidates=candidates)
+                image_candidates = [
+                    bbox
+                    for bbox in _image_text_candidates(
+                        result, pixmap.width, pixmap.height, image_boxes, candidates=candidates
+                    )
+                    if _covered_ratio(bbox, text_covered) < _MAX_COVERED_LINE_RATIO
+                ]
                 if image_candidates:
                     try:
                         high_pixmap = _render_page(page, 3.5)
                         high_image = np.frombuffer(high_pixmap.samples, dtype=np.uint8).reshape(
-                            high_pixmap.height, high_pixmap.width, 3)
+                            high_pixmap.height, high_pixmap.width, 3
+                        )
                         with _ENGINE_LOCK:
                             high_result = engine(high_image)
                         high_lines = _normalized_ocr_lines(
-                            high_result, high_pixmap.width, high_pixmap.height, text_covered, [],
-                            minimum_score=_HIGH_RES_MIN_TEXT_SCORE)
+                            high_result,
+                            high_pixmap.width,
+                            high_pixmap.height,
+                            text_covered,
+                            [],
+                            minimum_score=_HIGH_RES_MIN_TEXT_SCORE,
+                        )
                         # 复识别只补图片候选区域，避免再次加入普通分辨率的页外文字。
-                        lines.extend(line for line in high_lines if any(
-                            _overlap_ratio(line["bbox"], bbox) >= 0.5 for bbox in image_candidates))
+                        lines.extend(
+                            line
+                            for line in high_lines
+                            if any(_overlap_ratio(line["bbox"], bbox) >= 0.5 for bbox in image_candidates)
+                        )
                     except Exception as exc:
                         record["warning"] = "high_resolution_failed: " + type(exc).__name__
                         audit["status"] = "partial"
@@ -417,9 +343,13 @@ def supplement_uncovered_pdf_text(pdf_path: Path, middle_data: dict[str, Any]) -
                 ocr_blocks = [_make_text_block(row) for row in _group_lines_into_rows(lines)]
                 _insert_by_page_position(blocks, ocr_blocks)
                 original.update(page_data)
-                record.update(status="completed", added_rows=len(ocr_blocks),
-                              lines=[{"text": line["text"], "bbox": list(line["bbox"]),
-                                      "score": line["score"]} for line in lines])
+                record.update(
+                    status="completed",
+                    added_rows=len(ocr_blocks),
+                    lines=[
+                        {"text": line["text"], "bbox": list(line["bbox"]), "score": line["score"]} for line in lines
+                    ],
+                )
                 if ocr_blocks:
                     audit["pages"].append(page_idx + 1)
                     audit["added_rows"] += len(ocr_blocks)

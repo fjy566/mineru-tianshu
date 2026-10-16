@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 MinerU Pipeline Engine
 单例模式，每个进程只加载一次模型

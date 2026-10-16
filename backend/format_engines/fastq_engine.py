@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """Streaming FASTQ parser and read-quality report generator."""
 
 from collections import Counter
@@ -24,7 +25,9 @@ class FASTQEngine(FormatEngine):
 
             self._SeqIO = SeqIO
         except ImportError as e:
-            raise ImportError("BioPython is required for FASTQ support. Install it with: pip install biopython>=1.80") from e
+            raise ImportError(
+                "BioPython is required for FASTQ support. Install it with: pip install biopython>=1.80"
+            ) from e
 
     def parse(self, file_path: str, options: Optional[Dict] = None) -> Dict:
         if not self.validate_file(file_path):
@@ -213,9 +216,7 @@ class FASTQEngine(FormatEngine):
             selected_positions = {1, 10, 25, 50, 100, 150, 200, 300, 400}
             for item in stats["mean_quality_by_position"]:
                 if item["position"] in selected_positions:
-                    lines.append(
-                        f"| {item['position']} | {item['mean_phred']:.2f} | {item['read_count']:,} |"
-                    )
+                    lines.append(f"| {item['position']} | {item['mean_phred']:.2f} | {item['read_count']:,} |")
 
         lines.extend(
             [
@@ -238,5 +239,12 @@ class FASTQEngine(FormatEngine):
                     "",
                 ]
             )
-        lines.append("> " + ("报告统计了完整 FASTQ 文件；序列内容仅展示前 10 条的有限预览。" if is_chinese else "Statistics cover the full FASTQ file; sequence content is limited to previews of the first 10 reads."))
+        lines.append(
+            "> "
+            + (
+                "报告统计了完整 FASTQ 文件；序列内容仅展示前 10 条的有限预览。"
+                if is_chinese
+                else "Statistics cover the full FASTQ file; sequence content is limited to previews of the first 10 reads."
+            )
+        )
         return "\n".join(lines) + "\n"

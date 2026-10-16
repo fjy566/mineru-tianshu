@@ -1,3 +1,4 @@
+<!-- Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu. -->
 <template>
   <div class="w-full animate-fade-in">
     <PageHeader :title="$t('task.submitTask')" :description="$t('task.processingOptions')">

@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 PDF 处理工具函数
 """
@@ -183,9 +184,9 @@ def split_pdf_file(
 
             # 生成分片文件名
             if parent_task_id:
-                chunk_filename = f"{parent_task_id}_chunk_{i+1}_{end_page}.pdf"
+                chunk_filename = f"{parent_task_id}_chunk_{i + 1}_{end_page}.pdf"
             else:
-                chunk_filename = f"{pdf_path.stem}_chunk_{i+1}_{end_page}.pdf"
+                chunk_filename = f"{pdf_path.stem}_chunk_{i + 1}_{end_page}.pdf"
 
             chunk_path = output_dir / chunk_filename
 
@@ -200,7 +201,7 @@ def split_pdf_file(
             }
             chunks.append(chunk_info)
 
-            logger.info(f"   ✅ Created chunk {len(chunks)}: pages {i+1}-{end_page} ({chunk_page_count} pages)")
+            logger.info(f"   ✅ Created chunk {len(chunks)}: pages {i + 1}-{end_page} ({chunk_page_count} pages)")
 
         pdf.close()
         logger.info(f"✅ Split into {len(chunks)} chunks")

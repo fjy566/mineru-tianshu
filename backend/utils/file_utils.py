@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 上传文件名净化与校验
 防止路径穿越（../、驱动器前缀、Windows 保留字符）与不支持的文件类型落盘

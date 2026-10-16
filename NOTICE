@@ -1,0 +1,14 @@
+MinerU Tianshu (天枢)
+Copyright 2024 MinerU Tianshu Contributors
+
+Original project: https://github.com/magicyuan876/mineru-tianshu
+Original project author and maintainer: magicyuan876 and contributors.
+
+This repository is the fjy566 fork:
+https://github.com/fjy566/mineru-tianshu
+It contains incremental modifications made in 2026, including native Windows
+development support, conversion fixes, decoupling and equivalent postprocessing
+optimizations. See FORK_CHANGES.md and the Git history for the changes.
+
+Original notices and the Apache License 2.0 in LICENSE are retained.
+Third-party software and model weights remain subject to their own licenses.

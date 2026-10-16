@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 # 本地开发使用 ONNX 小模型和 llama.cpp VLM；权重通过 mineru-kit models download 预下载。
 model:
   base_dir: ${TIANSHU_MODEL_DIR:-E:/Program Files/MinerU/models}

@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """音视频回归：真实依赖之间的结构、白底画面与无音轨场景。"""
 
 import json

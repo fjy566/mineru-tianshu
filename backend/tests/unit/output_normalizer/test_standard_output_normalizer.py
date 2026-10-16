@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 import json
 
 import pytest
@@ -79,3 +80,15 @@ def test_primary_media_json_wins_over_nested_keyframe_json(tmp_path):
     (nested / "result_content_list_v2.json").write_text('[[{"type":"text"}]]')
     main = normalizer._normalize_json(tmp_path)
     assert json.loads(main.read_text())["type"] == "video"
+
+
+@pytest.mark.parametrize("prefix", ["result", "content"])
+def test_canonical_outputs_do_not_scan_auxiliary_tree(tmp_path, monkeypatch, prefix):
+    from pathlib import Path
+
+    (tmp_path / f"{prefix}.md").write_text("# 完整内容\n", encoding="utf-8")
+    (tmp_path / f"{prefix}.json").write_text('{"preserved":true}', encoding="utf-8")
+    monkeypatch.setattr(Path, "rglob", lambda *_: (_ for _ in ()).throw(AssertionError("unnecessary recursive scan")))
+    normalizer = StandardOutputNormalizer()
+    assert normalizer._normalize_markdown(tmp_path).read_text(encoding="utf-8") == "# 完整内容\n"
+    assert json.loads(normalizer._normalize_json(tmp_path).read_text(encoding="utf-8")) == {"preserved": True}

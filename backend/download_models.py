@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 """
 模型预下载脚本 - Tianshu
 

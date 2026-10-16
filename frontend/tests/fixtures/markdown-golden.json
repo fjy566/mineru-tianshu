@@ -1,0 +1,45 @@
+{
+  "baseline": "4ded210",
+  "cases": [
+    {
+      "name": "empty",
+      "markdown": "",
+      "html": ""
+    },
+    {
+      "name": "text-lists",
+      "markdown": "# 中文标题\n\n完整段落\n换行。\n\n- [x] 已完成\n- 保留内容",
+      "html": "<h1>中文标题</h1>\n<p>完整段落<br>换行。</p>\n<ul>\n<li><input checked=\"\" disabled=\"\" type=\"checkbox\"> 已完成</li>\n<li>保留内容</li>\n</ul>\n"
+    },
+    {
+      "name": "table",
+      "markdown": "| 项目 | 值 |\n|---|---|\n| 长度 | 12 mm |\n| 范围 | 3–8 |",
+      "html": "<table>\n<thead>\n<tr>\n<th>项目</th>\n<th>值</th>\n</tr>\n</thead>\n<tbody><tr>\n<td>长度</td>\n<td>12 mm</td>\n</tr>\n<tr>\n<td>范围</td>\n<td>3–8</td>\n</tr>\n</tbody></table>\n"
+    },
+    {
+      "name": "code",
+      "markdown": "```python\ndef hello():\n    return \"你好\"\n```\n\n```unknown\nconst x = 42\n```",
+      "html": "<pre><code class=\"hljs\"><span class=\"hljs-keyword\">def</span> <span class=\"hljs-title function_\">hello</span>():\n    <span class=\"hljs-keyword\">return</span> <span class=\"hljs-string\">\"你好\"</span></code></pre><pre><code class=\"hljs\">const x <span class=\"hljs-operator\">=</span> <span class=\"hljs-number\">42</span></code></pre>"
+    },
+    {
+      "name": "math",
+      "markdown": "$$x^2 + y^2 = z^2$$\n\n行内 $E=mc^2$。\n\n\\[\\frac{a}{b}\\]\n\n\\(x+y\\)",
+      "html": "<p><span class=\"katex-display\"><span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><msup><mi>y</mi><mn>2</mn></msup><mo>=</mo><msup><mi>z</mi><mn>2</mn></msup></mrow>x^2 + y^2 = z^2</math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.9474em;vertical-align:-0.0833em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\">x</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8641em;\"><span style=\"top:-3.113em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span><span class=\"mbin\">+</span><span class=\"mspace\" style=\"margin-right:0.2222em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:1.0585em;vertical-align:-0.1944em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.03588em;\">y</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8641em;\"><span style=\"top:-3.113em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8641em;\"></span><span class=\"mord\"><span class=\"mord mathnormal\" style=\"margin-right:0.04398em;\">z</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8641em;\"><span style=\"top:-3.113em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span></span></p>\n<p>行内 <span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow>E=mc^2</math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em;\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.05764em;\">E</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span><span class=\"mrel\">=</span><span class=\"mspace\" style=\"margin-right:0.2778em;\"></span></span><span class=\"base\"><span class=\"strut\" style=\"height:0.8141em;\"></span><span class=\"mord mathnormal\">m</span><span class=\"mord\"><span class=\"mord mathnormal\">c</span><span class=\"msupsub\"><span class=\"vlist-t\"><span class=\"vlist-r\"><span class=\"vlist\" style=\"height:0.8141em;\"><span style=\"top:-3.063em;margin-right:0.05em;\"><span class=\"pstrut\" style=\"height:2.7em;\"></span><span class=\"sizing reset-size6 size3 mtight\"><span class=\"mord mtight\">2</span></span></span></span></span></span></span></span></span></span></span>。</p>\n<p>[\\frac{a}{b}]</p>\n<p>(x+y)</p>\n"
+    },
+    {
+      "name": "unsafe-html",
+      "markdown": "<script>alert(1)</script><img src=\"/api/v1/files/output/x/a.png\" onerror=\"alert(2)\"><a href=\"javascript:alert(3)\">链接</a>",
+      "html": "<img src=\"/api/v1/files/output/x/a.png\"><a>链接</a>"
+    },
+    {
+      "name": "links-images",
+      "markdown": "![图片](/api/v1/files/output/test/a.png)\n\n[外部链接](https://example.com)\n\n> 引用 **文字**",
+      "html": "<p><img src=\"/api/v1/files/output/test/a.png\" alt=\"图片\"></p>\n<p><a href=\"https://example.com\">外部链接</a></p>\n<blockquote>\n<p>引用 <strong>文字</strong></p>\n</blockquote>\n"
+    },
+    {
+      "name": "html",
+      "markdown": "<table><tr><td>原生 HTML 表格</td></tr></table><details><summary>展开</summary>内容</details>",
+      "html": "<table><tbody><tr><td>原生 HTML 表格</td></tr></tbody></table><details><summary>展开</summary>内容</details>"
+    }
+  ]
+}

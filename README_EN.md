@@ -42,7 +42,32 @@ English | [简体中文](./README.md)
 
 ---
 
-## 📝 Latest Updates
+## Fork attribution, changes and development
+
+[fjy566/mineru-tianshu](https://github.com/fjy566/mineru-tianshu) is a fork of
+[magicyuan876/mineru-tianshu](https://github.com/magicyuan876/mineru-tianshu).
+**The original project is authored by magicyuan876 and MinerU Tianshu Contributors. fjy566 maintains the incremental changes in this fork.**
+The original attribution, Git history, upstream links and [Apache License 2.0](LICENSE) are retained.
+Third-party engines, dependencies and model weights retain their respective licenses.
+
+### Fork changes — 2026-10-16
+
+- Native Windows development with MinerU 4.0.12, page-by-page RapidOCR supplementation, PowerShell 7.6 launchers and Vite hot reload.
+- Conversion and usability fixes for PDF preview/page selection, FASTQ, legacy Office, media metadata, local branding, task operations, authentication and MCP SSE.
+- Separate conversion dispatch from Worker lifecycle, OCR geometry from model execution, and Markdown rendering from Vue state and authenticated image links.
+- Equivalent optimizations: group OCR deduplication by normalized text, reuse OCR candidates, check canonical output paths before recursive scans, and reuse sanitized HTML when tokens change.
+- Preserve models, inference tier/precision, OCR resolution/confidence, page coverage and supplementation; no quality-reducing shortcuts.
+
+Local microbenchmarks: 1500 distinct OCR lines `2007 → 2.01 ms`; 1500 lines across 50 text families `1987 → 23.85 ms`; canonical output lookup with 2000 auxiliary files `23.24 → 0.27 ms` (median of five repetitions).
+These measure specific postprocessing operations, **not end-to-end document inference speed**. See [performance/equivalence evidence](docs/PERFORMANCE_2026-10-16.md).
+
+For editable frontend development, use Python 3.12, Node.js 22.12+ and PowerShell 7.6; follow the [Windows development guide](docs/WINDOWS_MINERU4.md), then run `./启动天枢开发版.ps1` from PowerShell.
+Frontend: `http://127.0.0.1:3000`; stop with `./停止天枢开发版.ps1`.
+Backend checks: `python -m pytest backend/tests -q`; frontend checks: `npm test` and `npm run build` inside `frontend`.
+
+See [FORK_CHANGES.md](FORK_CHANGES.md) for modified areas and capability limits. The upstream introduction and changelog below are retained; upstream prebuilt images do not include this fork's changes.
+
+## 📝 Upstream Latest Updates
 
 ### 2026-10-16 🚀 v2.2.1: Prebuilt Docker Images
 
