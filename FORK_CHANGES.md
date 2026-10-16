@@ -41,16 +41,7 @@
 ## v2.2.1-fjy566.1 发布补充
 
 新增 Windows 原生开发包安装脚本、可重复打包工具及发布说明；启动器从 PATH 查找 npm。
-fork 的标签发布不自动触发继承的容器构建，手动构建入口仍保留。该在线初始化 Release 随 v2.2.1-fjy566.2 发布而撤下。
-
-## v2.2.1-fjy566.2 Windows 离线免安装包
-
-- 增加可重定位的 CPython、PowerShell、Node.js、Vite 前端依赖和 LGPL FFmpeg/FFprobe；首次启动生成本机密钥和管理员密码。
-- 捆绑 MinerU4 ONNX、MinerU2.5 GGUF 以及音频任务所需的五个 ModelScope 缓存；首次运行将 Hugging Face/Transformers 设为离线模式。
-- 增加分卷打包、SHA-256 清单、ZIP CRC 校验和 PowerShell 分卷合并解压脚本；解压后创建桌面启动/停止快捷方式。
-- 离线启动时 API 与 Worker 仅监听回环地址；Vite 代理地址可配置，开发前端仍支持源码热更新。
-- 保留原作者 `magicyuan876` 与 MinerU Tianshu Contributors 的归属、许可证和 Git 历史。第三方组件及模型许可见 [离线第三方许可清单](docs/THIRD_PARTY_LICENSES_OFFLINE.md)。
-- 不分发未被 MinerU4 使用的旧 PDF-Extract-Kit 权重；水印检测器模型卡对用途有额外限制，未包含该权重。旧 Office 格式转换仍依赖本机 Microsoft Office。
+fork 的标签发布不自动触发继承的容器构建，手动构建入口仍保留。此发布为联网初始化的开发包，不捆绑运行时和模型权重。
 
 ## 准确率约束与限制
 
