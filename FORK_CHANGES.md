@@ -41,7 +41,14 @@
 ## v2.2.1-fjy566.1 发布补充
 
 新增 Windows 原生开发包安装脚本、可重复打包工具及发布说明；启动器从 PATH 查找 npm。
-fork 的标签发布不自动触发继承的容器构建，手动构建入口仍保留。此发布为联网初始化的开发包，不捆绑运行时和模型权重。
+fork 的标签发布不自动触发继承的容器构建，手动构建入口仍保留。该联网初始化开发包不捆绑运行时和模型权重，现由 v2.2.1-fjy566.3 取代。
+
+## v2.2.1-fjy566.3 Windows 开发分发包
+
+- 安装脚本通过 winget 自动补齐 Python 3.12、Node.js LTS、FFmpeg 与缺少的 LibreOffice；随后安装后端/前端依赖、构建前端并创建桌面快捷方式。
+- 进度界面显示 12 个安装阶段和长任务耗时；MinerU 模型下载带官方 `mineru-kit` 输出及完整性校验，FunASR 模型按服务使用的 ModelScope ID 预下载到当前用户缓存。
+- MinerU 固定使用项目配置的 ONNX 小模型与 llama.cpp VLM，不减少解析步骤、推理精度、OCR 分辨率或补漏流程。
+- 保留原作者 magicyuan876 与 MinerU Tianshu Contributors 的署名、原许可证及 Git 历史。
 
 ## 准确率约束与限制
 

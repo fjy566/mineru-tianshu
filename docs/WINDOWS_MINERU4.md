@@ -5,11 +5,22 @@
 
 ## 启动与开发
 
-### 首次从 fork 克隆
+### 首次从开发 ZIP 安装
 
-发布 ZIP 或已克隆源码可先执行 `./安装天枢开发环境.ps1 -CheckOnly`，再执行 `./安装天枢开发环境.ps1` 完成依赖、模型和快捷方式初始化。下面保留手动安装步骤供开发排查使用。
+开发 ZIP 需要联网初始化。使用 Windows x64 和 winget；若从 PowerShell 5.1 或旧版 7.x 启动，安装器先升级到 PowerShell 7.6，再自动安装缺少的 Python 3.12、Node.js LTS、FFmpeg 与 LibreOffice。安装目录所在磁盘建议保留至少 25 GB 可用空间。`-CheckOnly` 需在 PowerShell 7.6 中运行；如果尚未安装 7.6，请先直接运行安装脚本。
 
-准备 Python 3.12、Node.js 22.12+、PowerShell 7.6；音视频需要 FFmpeg 加入 PATH，旧 DOC/PPT 转换需要已安装的 Microsoft Office 或 LibreOffice。
+```powershell
+& './安装天枢开发环境.ps1' -CheckOnly
+& './安装天枢开发环境.ps1'
+```
+
+安装器显示每阶段进度与长任务等待时间，安装后端和前端依赖、构建前端，下载并验证 MinerU Standard 模型，并预下载 FunASR 使用的 ModelScope 音频模型。默认创建桌面启动/停止快捷方式和首次管理员配置；已有 `backend/.env` 会保留。首次失败后重新运行可续用已安装依赖与模型缓存。
+
+可选参数：`-SkipModels`、`-SkipAudioModels`、`-SkipOptionalTools`、`-SkipShortcuts`。
+
+### 从 fork 源码克隆
+
+安装器会通过 winget 安装 Python 3.12、Node.js LTS、FFmpeg 和 LibreOffice（如系统缺少）。PowerShell 7.6 与 Windows Package Manager（winget）需预先可用。
 在 PowerShell 7 中执行：
 
 ```powershell
@@ -28,15 +39,16 @@ Copy-Item backend/.env.example backend/.env
 $env:MINERU_CONFIG = "$PWD/backend/mineru4.yaml"
 $env:MINERU_HOME = "$PWD/data/mineru4"
 $env:TIANSHU_MODEL_DIR = "$PWD/models"
-& '.venv/Scripts/mineru-kit.exe' models download --tier standard --source modelscope
-& '.venv/Scripts/mineru-kit.exe' models verify --tier standard
+& '.venv/Scripts/mineru-kit.exe' models download --tier standard --small-backend onnx --vlm-engine llama-cpp --source modelscope
+& '.venv/Scripts/mineru-kit.exe' models verify --tier standard --small-backend onnx --vlm-engine llama-cpp
+& '.venv/Scripts/python.exe' scripts/download_audio_models.py
 Push-Location frontend
 npm ci
 Pop-Location
 & './启动天枢开发版.ps1'
 ```
 
-依赖清单包含可选多模态能力，首次安装和模型下载需要较多空间及网络时间。GPU 使用还取决于本机驱动与 PyTorch CUDA 安装；CPU 路径可由启动器自动检测。
+依赖清单包含可选多模态能力，首次安装和模型下载需要较多空间及网络时间。GPU 使用还取决于本机驱动与 PyTorch CUDA 安装；CPU 路径可由启动器自动检测。安装器不会更改 NVIDIA 驱动。
 
 ### 已安装的本机环境
 

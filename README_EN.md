@@ -61,9 +61,9 @@ Third-party engines, dependencies and model weights retain their respective lice
 Local microbenchmarks: 1500 distinct OCR lines `2007 → 2.01 ms`; 1500 lines across 50 text families `1987 → 23.85 ms`; canonical output lookup with 2000 auxiliary files `23.24 → 0.27 ms` (median of five repetitions).
 These measure specific postprocessing operations, **not end-to-end document inference speed**. See [performance/equivalence evidence](docs/PERFORMANCE_2026-10-16.md).
 
-Download the native development ZIP from [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases).
-It includes source and prebuilt frontend assets; run `./安装天枢开发环境.ps1` in PowerShell 7.6 to install dependencies, download models and create desktop shortcuts.
-This package requires online initialization and does not bundle runtimes or model weights. See the [release notes](docs/RELEASE_v2.2.1-fjy566.1.md).
+Download the [v2.2.1-fjy566.3 Windows native development package](docs/RELEASE_v2.2.1-fjy566.3.md) from [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases). It retains editable source code and Vite hot reload.
+Run `./安装天枢开发环境.ps1` in PowerShell 7.6. The installer shows a 12-stage progress bar, installs Python 3.12, Node.js LTS and project dependencies, then downloads and verifies MinerU Standard and FunASR audio models. It also attempts to install FFmpeg and LibreOffice through winget when needed. If PowerShell 7.6 is missing, run the script from the built-in Windows PowerShell; it installs 7.6 and continues there.
+This package requires online initialization and does not bundle runtimes or model weights. Reserve at least 25 GB for the first setup. See the [release notes](docs/RELEASE_v2.2.1-fjy566.3.md) for details, options and limits.
 
 For editable frontend development, use Python 3.12, Node.js 22.12+ and PowerShell 7.6; follow the [Windows development guide](docs/WINDOWS_MINERU4.md), then run `./启动天枢开发版.ps1` from PowerShell.
 Frontend: `http://127.0.0.1:3000`; stop with `./停止天枢开发版.ps1`.

@@ -63,9 +63,9 @@
 
 ### 原生开发入口
 
-可直接从 [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases) 下载原生开发 ZIP。
-解压后用 PowerShell 7.6 执行 `./安装天枢开发环境.ps1`，安装依赖、下载模型并创建桌面快捷方式。
-这是联网初始化包，不包含运行时和模型权重；详细步骤见 [发布说明](docs/RELEASE_v2.2.1-fjy566.1.md)。
+可从 [GitHub Releases](https://github.com/fjy566/mineru-tianshu/releases) 下载 [v2.2.1-fjy566.3 Windows 原生开发包](docs/RELEASE_v2.2.1-fjy566.3.md)。它保留完整可编辑源码，前端使用 Vite 热更新。
+在 PowerShell 7.6 中运行 `./安装天枢开发环境.ps1`，安装器会显示 12 阶段进度，自动安装 Python 3.12、Node.js LTS、所需后端/前端依赖，下载并验证 MinerU Standard 与 FunASR 音频模型；缺少 FFmpeg 或 Office 转换器时也会尝试用 winget 安装。若系统尚无 PowerShell 7.6，可从系统自带的 Windows PowerShell 运行该脚本，安装器会先安装 7.6 并继续。
+该包需要联网初始化，不捆绑运行时和模型权重。首次安装建议预留至少 25 GB 空间；详细步骤、可选参数和功能边界见 [发布说明](docs/RELEASE_v2.2.1-fjy566.3.md)。
 
 本 fork 在 Windows 上优先使用 Python 3.12、Node.js 22.12+ 和 PowerShell 7.6 开发部署。
 环境与模型准备见 [Windows 开发说明](docs/WINDOWS_MINERU4.md)，随后在仓库目录执行：
