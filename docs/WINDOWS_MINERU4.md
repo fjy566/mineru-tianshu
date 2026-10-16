@@ -7,6 +7,8 @@
 
 ### 首次从 fork 克隆
 
+发布 ZIP 或已克隆源码可先执行 `./安装天枢开发环境.ps1 -CheckOnly`，再执行 `./安装天枢开发环境.ps1` 完成依赖、模型和快捷方式初始化。下面保留手动安装步骤供开发排查使用。
+
 准备 Python 3.12、Node.js 22.12+、PowerShell 7.6；音视频需要 FFmpeg 加入 PATH，旧 DOC/PPT 转换需要已安装的 Microsoft Office 或 LibreOffice。
 在 PowerShell 7 中执行：
 

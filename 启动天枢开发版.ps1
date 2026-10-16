@@ -4,7 +4,8 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backend = Join-Path $root 'backend'
 $frontend = Join-Path $root 'frontend'
 $python = Join-Path $root '.venv\Scripts\python.exe'
-$npm = Join-Path $env:ProgramFiles 'nodejs\npm.cmd'
+$npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+$npm = if ($npmCommand) { $npmCommand.Source } else { Join-Path $env:ProgramFiles 'nodejs\npm.cmd' }
 $stateFile = Join-Path $root 'logs\dev-pids.json'
 $env:MINERU_CONFIG = Join-Path $backend 'mineru4.yaml'
 $env:MINERU_HOME = Join-Path $root 'data\mineru4'
@@ -18,7 +19,7 @@ $env:TIANSHU_LOCAL_FILE_SERVER_ENABLED = 'true'
 
 function Fail([string]$message) {
     Write-Host "`n启动失败：$message" -ForegroundColor Red
-    Write-Host '详情日志位于 E:\Program Files\MinerU\logs' -ForegroundColor Yellow
+    Write-Host "详情日志位于 $(Join-Path $root 'logs')" -ForegroundColor Yellow
     Read-Host '按回车关闭窗口'
     exit 1
 }
@@ -27,7 +28,7 @@ Set-Location $root
 if (-not (Test-Path $python)) { Fail '项目虚拟环境不存在。请在安装目录运行 .venv 的 Python 环境配置。' }
 if (-not (Test-Path (Join-Path $backend '.env'))) { Fail 'backend\.env 不存在，请先完成首次配置。' }
 if (-not (Test-Path (Join-Path $frontend 'node_modules\vite\bin\vite.js'))) { Fail '前端依赖不存在，请先在 frontend 目录运行 npm install。' }
-if (-not (Test-Path $npm)) { Fail '未找到 Node.js npm；请安装 Node.js 18 或更高版本。' }
+if (-not (Test-Path $npm)) { Fail '未找到 Node.js npm；请安装 Node.js 22.12 或更高版本。' }
 
 # 重复点击快捷方式时，直接打开已经运行的本机服务。
 if (Test-Path -LiteralPath $stateFile) {

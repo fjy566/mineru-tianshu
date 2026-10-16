@@ -1,3 +1,4 @@
+# Modified in fjy566/mineru-tianshu (2026-10-16); original project: magicyuan876/mineru-tianshu.
 name: Docker Images
 
 on:
@@ -11,6 +12,8 @@ permissions:
 
 jobs:
   build:
+    # Fork 的原生发布不自动构建容器；需要时仍可手动运行上游构建流程。
+    if: github.repository == 'magicyuan876/mineru-tianshu' || github.event_name == 'workflow_dispatch'
     name: ${{ matrix.image }}
     runs-on: ubuntu-latest
     strategy:
