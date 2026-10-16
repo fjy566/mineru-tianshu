@@ -136,9 +136,10 @@ WATERMARK_REMOVAL_AVAILABLE = check_dependency("remove_watermark", "Watermark Re
 
 FORMAT_ENGINES_AVAILABLE = False
 try:
-    from format_engines import FormatEngineRegistry, FASTAEngine, GenBankEngine
+    from format_engines import FormatEngineRegistry, FASTAEngine, FASTQEngine, GenBankEngine
 
     FormatEngineRegistry.register(FASTAEngine())
+    FormatEngineRegistry.register(FASTQEngine())
     FormatEngineRegistry.register(GenBankEngine())
     FORMAT_ENGINES_AVAILABLE = True
     logger.info(f"✅ Format Engines available: {', '.join(FormatEngineRegistry.get_supported_extensions())}")
@@ -383,7 +384,7 @@ class MinerUWorkerAPI(ls.LitAPI):
             hf_endpoint = os.getenv("HF_ENDPOINT", "https://hf-mirror.com")
             os.environ.setdefault("HF_ENDPOINT", hf_endpoint)
 
-        # CPU 线程上限：必须在下方首次导入 torch（mineru.utils.model_utils）之前设置环境变量
+        # CPU 线程上限：必须在首次加载 Torch 与解析模型之前设置环境变量。
         cpu_threads = configure_cpu_threads()
 
         # 设备配置
@@ -401,9 +402,6 @@ class MinerUWorkerAPI(ls.LitAPI):
             self.accelerator = "cpu"
             self.engine_device = "cpu"
 
-        # MinerU VRAM 设置
-        from mineru.utils.model_utils import get_vram
-
         apply_cpu_threads_to_libs(cpu_threads)
         ort_providers = configure_onnxruntime_sessions(cpu_threads, use_cuda=self.accelerator == "cuda")
         logger.info(
@@ -415,7 +413,9 @@ class MinerUWorkerAPI(ls.LitAPI):
         if os.getenv("MINERU_VIRTUAL_VRAM_SIZE", None) is None:
             if self.accelerator == "cuda":
                 try:
-                    vram = round(get_vram("cuda:0"))
+                    import torch
+
+                    vram = round(torch.cuda.get_device_properties(0).total_memory / (1024**3))
                     os.environ["MINERU_VIRTUAL_VRAM_SIZE"] = str(vram)
                 except Exception:
                     os.environ["MINERU_VIRTUAL_VRAM_SIZE"] = "8"
@@ -452,11 +452,11 @@ class MinerUWorkerAPI(ls.LitAPI):
 
         logger.info(f"🚀 Worker Setup Complete: {self.worker_id}")
 
-        if WATERMARK_REMOVAL_AVAILABLE and self.accelerator == "cuda":
+        if WATERMARK_REMOVAL_AVAILABLE:
             try:
                 from remove_watermark.pdf_watermark_handler import PDFWatermarkHandler
 
-                self.watermark_handler = PDFWatermarkHandler(device="cuda:0", use_lama=True)
+                self.watermark_handler = PDFWatermarkHandler(device=self.engine_device, use_lama=True)
                 logger.info("✅ Watermark engine initialized")
             except Exception as e:
                 logger.error(f"❌ Failed to init watermark engine: {e}")
@@ -517,6 +517,8 @@ class MinerUWorkerAPI(ls.LitAPI):
         task_id = task["task_id"]
         file_path = task["file_path"]
         options = json.loads(task.get("options", "{}"))
+        if task.get("file_name"):
+            options["original_filename"] = task["file_name"]
         parent_task_id = task.get("parent_task_id")
         backend = task.get("backend", "auto")
 
@@ -531,6 +533,7 @@ class MinerUWorkerAPI(ls.LitAPI):
             return
 
         corrected_copy = None
+        preprocess_warnings = []
         decrypt_work_dir = None
         try:
             # 0. 前置校验：文件必须存在且非空
@@ -576,11 +579,19 @@ class MinerUWorkerAPI(ls.LitAPI):
                     return
 
             # 4. 去水印
-            if file_ext == ".pdf" and options.get("remove_watermark", False) and self.watermark_handler:
+            if options.get("remove_watermark", False) and file_ext in {".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}:
                 try:
-                    cleaned_path = self._preprocess_remove_watermark(file_path, options)
-                    file_path = str(cleaned_path)
+                    if not self.watermark_handler:
+                        raise RuntimeError("去水印组件不可用")
+                    watermark_source = file_path
+                    if file_ext != ".pdf":
+                        import img2pdf
+                        watermark_source = str(Path(self.output_dir) / f"{Path(file_path).stem}_watermark_input.pdf")
+                        Path(watermark_source).write_bytes(img2pdf.convert(file_path))
+                    cleaned_path = self._preprocess_remove_watermark(watermark_source, options)
+                    file_path, file_ext = str(cleaned_path), ".pdf"
                 except Exception as e:
+                    preprocess_warnings.append("水印处理未完成，以下内容使用原文件解析。请核对原图。")
                     logger.warning(f"⚠️ Watermark removal failed: {e}")
 
             # 5. 引擎路由
@@ -592,6 +603,10 @@ class MinerUWorkerAPI(ls.LitAPI):
                 logger.info(f"📊 {file_ext.upper()} spreadsheet detected, parsing with MarkItDown (backend={backend})")
                 result = self._process_with_markitdown(file_path)
 
+            elif FORMAT_ENGINES_AVAILABLE and FormatEngineRegistry.is_supported(file_path):
+                # 专业格式按文件本身选择解析引擎，避免通用 MinerU 预设把生物序列交给文档解析器。
+                result = self._process_with_format_engine(file_path, options)
+
             elif backend == "sensevoice":
                 if not SENSEVOICE_AVAILABLE:
                     raise ValueError("SenseVoice not available")
@@ -602,20 +617,18 @@ class MinerUWorkerAPI(ls.LitAPI):
                     raise ValueError("Video engine not available")
                 result = self._process_video(file_path, options)
 
-            elif is_mineru_backend:
+            elif is_mineru_backend and file_ext in {".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".docx", ".pptx"}:
                 if not MINERU_PIPELINE_AVAILABLE:
                     raise ValueError("MinerU Pipeline not available")
                 options["parse_mode"] = backend
                 result = self._process_with_mineru(file_path, options)
 
-            elif backend == "auto":
-                if FORMAT_ENGINES_AVAILABLE and FormatEngineRegistry.is_supported(file_path):
-                    result = self._process_with_format_engine(file_path, options)
-                elif file_ext in [".wav", ".mp3", ".flac", ".m4a", ".ogg"] and SENSEVOICE_AVAILABLE:
+            elif backend == "auto" or is_mineru_backend:
+                if file_ext in [".wav", ".mp3", ".flac", ".m4a", ".ogg"] and SENSEVOICE_AVAILABLE:
                     result = self._process_audio(file_path, options)
-                elif file_ext in [".mp4", ".avi", ".mkv", ".mov"] and VIDEO_ENGINE_AVAILABLE:
+                elif file_ext in [".mp4", ".avi", ".mkv", ".mov", ".webm"] and VIDEO_ENGINE_AVAILABLE:
                     result = self._process_video(file_path, options)
-                elif file_ext in [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".pptx"] and MINERU_PIPELINE_AVAILABLE:
+                elif file_ext in [".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".docx", ".pptx"] and MINERU_PIPELINE_AVAILABLE:
                     options["parse_mode"] = "pipeline"
                     result = self._process_with_mineru(file_path, options)
                 elif file_ext in [".doc", ".ppt"]:
@@ -667,6 +680,11 @@ class MinerUWorkerAPI(ls.LitAPI):
 
             if not result:
                 raise ValueError("No result generated by engine")
+
+            if preprocess_warnings:
+                prefix = "\n".join("> " + warning for warning in preprocess_warnings) + "\n\n"
+                result["content"] = prefix + result.get("content", "")
+                (Path(result["result_path"]) / "result.md").write_text(result["content"], encoding="utf-8")
 
             # 6. 保存完整结果到数据库 (包含 json_content 和 pdf_path)
             self.task_db.update_task_status(
@@ -895,7 +913,7 @@ class MinerUWorkerAPI(ls.LitAPI):
         return {"result_path": str(output_dir), "content": markdown_content, "pdf_path": pdf_path}
 
     def _process_with_format_engine(self, file_path: str, options: dict, engine_name: Optional[str] = None) -> dict:
-        lang = options.get("language", "en")
+        lang = options.get("lang") or options.get("language", "en")
 
         if engine_name:
             engine = FormatEngineRegistry.get_engine(engine_name)
@@ -905,7 +923,10 @@ class MinerUWorkerAPI(ls.LitAPI):
         if not engine:
             raise ValueError("No format engine available")
 
-        result = engine.parse(file_path, options={"language": lang})
+        result = engine.parse(
+            file_path,
+            options={"language": lang, "file_name": options.get("original_filename")},
+        )
 
         output_dir = Path(self.output_dir) / Path(file_path).stem
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -916,7 +937,12 @@ class MinerUWorkerAPI(ls.LitAPI):
         )
 
         normalize_output(output_dir)
-        return {"result_path": str(output_dir), "content": result["content"], "json_content": result["json_content"]}
+        return {
+            "result_path": str(output_dir),
+            "content": result["markdown"],
+            "markdown_file": "result.md",
+            "json_content": result["json_content"],
+        }
 
     # -------------------------------------------------------------------------
     # Utilities
@@ -1009,7 +1035,16 @@ class MinerUWorkerAPI(ls.LitAPI):
                     str(temp_input),
                 ]
 
-                stdout, stderr, returncode = self._run_with_process_group(cmd, timeout)
+                try:
+                    stdout, stderr, returncode = self._run_with_process_group(cmd, timeout)
+                except FileNotFoundError:
+                    if os.name != "nt":
+                        raise
+                    # Windows 原生开发环境可使用已安装的 Microsoft Office。
+                    import sys
+                    converter = Path(__file__).parent / "utils" / "windows_office_convert.py"
+                    cmd = [sys.executable, str(converter), str(temp_input), str(temp_path / f"{input_file.stem}.{target_fmt}")]
+                    stdout, stderr, returncode = self._run_with_process_group(cmd, timeout)
 
                 if returncode != 0:
                     raise RuntimeError(
@@ -1054,6 +1089,8 @@ class MinerUWorkerAPI(ls.LitAPI):
         if hasattr(os, "setsid"):
             popen_kwargs["start_new_session"] = True
 
+        if os.name == "nt":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         proc = subprocess.Popen(cmd, **popen_kwargs)
         try:
             stdout, stderr = proc.communicate(timeout=timeout)
@@ -1289,6 +1326,7 @@ class MinerUWorkerAPI(ls.LitAPI):
         parent_out.mkdir(parents=True, exist_ok=True)
 
         md_parts, json_pages = [], []
+        zip_entries = []
 
         for child in children:
             if child["status"] != "completed":
@@ -1309,6 +1347,12 @@ class MinerUWorkerAPI(ls.LitAPI):
             md_parts.append(md_text)
 
             json_file = next((f for f in res_dir.rglob("*.json") if "result" in f.name or "content" in f.name), None)
+            if entry_name:
+                try:
+                    structured = json.loads(json_file.read_text(encoding="utf-8")) if json_file else {"markdown": md_text}
+                except (ValueError, OSError):
+                    structured = {"markdown": md_text}
+                zip_entries.append({"file_name": entry_name, "content": structured})
             if json_file:
                 try:
                     data = json.loads(json_file.read_text(encoding="utf-8"))
@@ -1332,6 +1376,8 @@ class MinerUWorkerAPI(ls.LitAPI):
                     pass
 
         (parent_out / "result.md").write_text("\n\n\n\n".join(md_parts), encoding="utf-8")
+        if zip_entries:
+            json_pages = zip_entries
         if json_pages:
             (parent_out / "result.json").write_text(
                 json.dumps(json_pages, indent=2, ensure_ascii=False), encoding="utf-8"

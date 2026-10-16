@@ -131,6 +131,7 @@ export type Backend =
   | 'sensevoice'
   | 'video'
   | 'fasta'             // FASTA 生物序列格式
+  | 'fastq'             // FASTQ 测序 reads 与质量值
   | 'genbank'           // GenBank 基因序列注释格式
   | 'vlm-transformers'  // (已废弃，保留兼容)
   | 'vlm-vllm-engine'   // (已废弃，保留兼容)
@@ -232,6 +233,7 @@ export interface SubmitTaskRequest {
   remove_watermark?: boolean
   watermark_conf_threshold?: number
   watermark_dilation?: number
+  watermark_keywords?: string
 
   // Audio 专属参数 (SenseVoice)
   enable_speaker_diarization?: boolean

@@ -103,10 +103,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getEnginesInfo } from '@/api/systemApi'
-import type { EnginesResponse } from '@/api/types'
+import type { EnginesResponse, EngineItem } from '@/api/types'
 import LoadingSpinner from './LoadingSpinner.vue'
 import {
   Cpu,
@@ -125,8 +125,9 @@ const data = ref<EnginesResponse | null>(null)
 const showDetail = ref(false)
 const { t } = useI18n()
 
-const engineGroups = computed(() => {
-  if (!data.value) return {}
+type EngineGroup = {label: string; icon: Component; engines: EngineItem[]; style: string}
+const engineGroups = computed<Record<string, EngineGroup>>(() => {
+  if (!data.value) return {} as Record<string, EngineGroup>
   const { engines } = data.value
   return {
     document: {

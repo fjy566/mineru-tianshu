@@ -15,8 +15,8 @@ export async function getQueueStats(): Promise<QueueStatsResponse> {
 /**
  * 重置超时任务
  */
-export async function resetStaleTasks(timeoutMinutes: number = 60): Promise<ApiResponse> {
-  const response = await apiClient.post<ApiResponse>('/api/v1/admin/reset-stale', null, {
+export async function resetStaleTasks(timeoutMinutes: number = 60): Promise<ApiResponse & { reset_count: number }> {
+  const response = await apiClient.post<ApiResponse & { reset_count: number }>('/api/v1/admin/reset-stale', null, {
     params: { timeout_minutes: timeoutMinutes },
   })
   return response.data
@@ -25,8 +25,8 @@ export async function resetStaleTasks(timeoutMinutes: number = 60): Promise<ApiR
 /**
  * 清理旧任务
  */
-export async function cleanupOldTasks(days: number = 7): Promise<ApiResponse> {
-  const response = await apiClient.post<ApiResponse>('/api/v1/admin/cleanup', null, {
+export async function cleanupOldTasks(days: number = 7): Promise<ApiResponse & { deleted_count: number }> {
+  const response = await apiClient.post<ApiResponse & { deleted_count: number }>('/api/v1/admin/cleanup', null, {
     params: { days },
   })
   return response.data

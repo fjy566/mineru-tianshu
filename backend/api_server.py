@@ -185,7 +185,7 @@ def _build_file_response(full_path: Path) -> FileResponse:
     return FileResponse(path=str(full_path), media_type=media_type or "application/octet-stream", headers=headers)
 
 
-# 注意：此函数已废弃，Worker 已自动上传图片到 RustFS 并替换 URL
+# Worker 使用 RustFS 时直接生成远程图片地址；本机开发模式通过此函数把本地图片改写为鉴权文件接口。
 def process_markdown_images_legacy(md_content: str, image_dir: Path, result_path: str):
     """
     【向后兼容】处理 Markdown 中的图片引用
@@ -287,8 +287,9 @@ async def submit_task(
     keep_keyframes: bool = Form(False, description="是否保留提取的关键帧图像"),
     enable_speaker_diarization: bool = Form(False, description="是否启用说话人分离"),
     remove_watermark: bool = Form(False, description="是否启用水印去除"),
-    watermark_conf_threshold: float = Form(0.35, description="水印检测置信度阈值"),
-    watermark_dilation: int = Form(10, description="水印掩码膨胀大小"),
+    watermark_conf_threshold: float = Form(0.35, ge=0, le=1, description="水印检测置信度阈值"),
+    watermark_dilation: int = Form(10, ge=0, le=100, description="水印掩码膨胀大小"),
+    watermark_keywords: Optional[str] = Form(None, description="原生文字水印关键词，逗号分隔；留空使用检测模型"),
     webhook_url: Optional[str] = Form(None, description="任务级 Webhook 回调地址（任务终态时推送通知）"),
     password: Optional[str] = Form(None, description="加密文档打开密码（PDF / Office / ZIP，可选，仅存任务 options）"),
     current_user: User = Depends(require_permission(Permission.TASK_SUBMIT)),
@@ -298,6 +299,13 @@ async def submit_task(
         safe_name = sanitize_filename(file.filename or "")
     except FilenameValidationError as e:
         raise HTTPException(status_code=400, detail=f"Invalid file name: {e}")
+
+    if method not in {"auto", "txt", "ocr"}:
+        raise HTTPException(status_code=400, detail="Invalid parsing method")
+    if start_page is not None and start_page < 0:
+        raise HTTPException(status_code=400, detail="start_page must be non-negative")
+    if end_page is not None and end_page != -1 and end_page < (start_page or 0):
+        raise HTTPException(status_code=400, detail="end_page must not be before start_page")
 
     # 任务级 webhook 地址先做 SSRF 校验，不合法直接拒绝提交
     webhook_url = (webhook_url or "").strip()
@@ -377,6 +385,9 @@ async def submit_task(
             "watermark_dilation": watermark_dilation,
         }
 
+        if watermark_keywords:
+            import re
+            options["watermark_keywords"] = [word.strip() for word in re.split(r"[,，\n]+", watermark_keywords) if word.strip()]
         if webhook_url:
             options["webhook_url"] = webhook_url
 
@@ -407,7 +418,7 @@ async def submit_task(
             "message": "Task submitted successfully",
             "file_name": file.filename,
             "user_id": current_user.user_id,
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now().astimezone().isoformat(),
         }
 
     except HTTPException:
@@ -455,6 +466,7 @@ def get_task_status(
         "started_at": task["started_at"],
         "completed_at": task["completed_at"],
         "user_id": task.get("user_id"),
+        "result_path": task.get("result_path"),
     }
 
     if not task.get("is_parent"):
@@ -543,7 +555,7 @@ def get_task_status(
                     if format in ["json", "both"] and json_files:
                         import json as json_lib
 
-                        json_file = json_files[0]
+                        json_file = next((f for f in json_files if f == result_dir / "result.json"), json_files[0])
                         try:
                             with open(json_file, "r", encoding="utf-8") as f:
                                 json_content = json_lib.load(f)
@@ -649,6 +661,9 @@ def retry_task(
     if not current_user.has_permission(Permission.TASK_DELETE_ALL):
         if task.get("user_id") != current_user.user_id:
             raise HTTPException(status_code=403, detail="Permission denied")
+
+    if task.get("status") not in {"failed", "cancelled"}:
+        raise HTTPException(status_code=409, detail="Only failed or cancelled tasks can be retried")
 
     # 提供新密码时只允许 failed 任务更新（空串视为未提供，保持原密码不变）
     if password:
@@ -782,6 +797,9 @@ def clear_task_cache_endpoint(task_id: str, request: Request, current_user: User
         if task.get("user_id") != current_user.user_id:
             raise HTTPException(status_code=403, detail="Permission denied")
 
+    if task.get("status") not in {"completed", "failed", "cancelled"}:
+        raise HTTPException(status_code=409, detail="Active task cache cannot be cleared")
+
     try:
         if db.clear_task_cache(task_id):
             record_audit(
@@ -807,7 +825,7 @@ def get_queue_stats(current_user: User = Depends(require_permission(Permission.Q
         "success": True,
         "stats": stats,
         "total": sum(stats.values()),
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now().astimezone().isoformat(),
         "user": current_user.username,
     }
 
@@ -911,7 +929,7 @@ def list_tasks(
 @router.post("/admin/cleanup", tags=["系统管理"])
 def cleanup_old_tasks(
     request: Request,
-    days: int = Query(7, description="清理N天前的任务"),
+    days: int = Query(7, ge=1, description="清理N天前的任务"),
     current_user: User = Depends(require_permission(Permission.QUEUE_MANAGE)),
 ):
     deleted_count = db.cleanup_old_task_records(days)
@@ -933,7 +951,7 @@ def cleanup_old_tasks(
 @router.post("/admin/reset-stale", tags=["系统管理"])
 def reset_stale_tasks(
     request: Request,
-    timeout_minutes: int = Query(60, description="超时时间（分钟）"),
+    timeout_minutes: int = Query(60, ge=1, description="超时时间（分钟）"),
     current_user: User = Depends(require_permission(Permission.QUEUE_MANAGE)),
 ):
     from stale_tasks import handle_stale_tasks
@@ -1034,23 +1052,23 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
         "document": [
             {
                 "name": "pipeline",
-                "display_name": "Standard Pipeline",
+                "display_name": "MinerU 4 Basic (ONNX)",
                 "version": mineru_ver,
-                "description": "基于 PDF-Extract-Kit 的传统多模型管道，速度快，无幻觉，适合大多数文档。",
+                "description": "MinerU 4 Basic 本地解析，使用 ONNX 版面、OCR、公式与表格模型。Office 文件使用原生 Flash 解析。",
                 "supported_formats": [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".pptx"],
             },
             {
                 "name": "vlm-auto-engine",
                 "display_name": "MinerU VLM (视觉大模型)",
                 "version": mineru_ver,
-                "description": "基于 MinerU 3.X (1.2B) 视觉模型，擅长处理复杂排版、图表和非标准文档。Office 文件将使用原生解析。",
+                "description": "MinerU 4 Standard，使用本地 llama.cpp 视觉模型或指定的远程 VLM。Office 文件使用原生 Flash 解析。",
                 "supported_formats": [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".pptx"],
             },
             {
                 "name": "hybrid-auto-engine",
                 "display_name": "Hybrid High-Precision (高精度混合)",
                 "version": mineru_ver,
-                "description": "结合 Pipeline 的稳定性与 VLM 的理解能力，提供最高精度的解析效果。Office 文件将使用原生解析。",
+                "description": "兼容旧 Hybrid 选项，使用 MinerU 4 Standard 混合解析。Office 文件使用原生 Flash 解析。",
                 "supported_formats": [".pdf", ".png", ".jpg", ".jpeg", ".docx", ".pptx"],
             },
         ],
@@ -1061,6 +1079,7 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
         "office": [
             {
                 "name": "MarkItDown (快速)",
+                "display_name": "MarkItDown (快速)",
                 "value": "auto",
                 "version": _pkg_version("markitdown"),
                 "description": "轻量文本、HTML/CSV 与 Excel 表格（.xlsx/.xls 直接读取，无需转换）转换引擎",
@@ -1068,15 +1087,16 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
             },
             {
                 "name": "LibreOffice 转换器（旧版 Office）",
+                "display_name": "Microsoft Office / LibreOffice（旧版 Office）",
                 "value": "auto",
                 "version": mineru_ver,
-                "description": "将旧版 .doc/.ppt 转换为新版格式后由 MinerU 原生解析",
+                "description": "将旧版 .doc/.ppt 转换为新版格式后由 MinerU 原生解析；Windows 优先使用 LibreOffice，缺失时使用已安装的 Microsoft Office。",
                 "supported_formats": [".doc", ".ppt"],
             },
         ],
     }
 
-    if importlib.util.find_spec("audio_engines") is not None:
+    if importlib.util.find_spec("audio_engines") is not None and importlib.util.find_spec("funasr") is not None:
         engines["audio"].append(
             {
                 "name": "sensevoice",
@@ -1086,7 +1106,7 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
             }
         )
 
-    if importlib.util.find_spec("video_engines") is not None:
+    if importlib.util.find_spec("video_engines") is not None and importlib.util.find_spec("funasr") is not None and __import__("shutil").which("ffmpeg"):
         engines["video"].append(
             {
                 "name": "video",
@@ -1097,7 +1117,12 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
         )
 
     try:
-        from format_engines import FormatEngineRegistry
+        from format_engines import FASTAEngine, FASTQEngine, FormatEngineRegistry, GenBankEngine
+
+        if not FormatEngineRegistry.list_engines():
+            FormatEngineRegistry.register(FASTAEngine())
+            FormatEngineRegistry.register(FASTQEngine())
+            FormatEngineRegistry.register(GenBankEngine())
 
         for engine_info in FormatEngineRegistry.list_engines():
             engines["format"].append(
@@ -1116,7 +1141,7 @@ def list_engines(current_user: User = Depends(get_current_active_user)):
         "success": True,
         "engines": engines,
         "system_info": system_info,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now().astimezone().isoformat(),
     }
 
 

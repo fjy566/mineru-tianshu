@@ -146,8 +146,10 @@ class PDFWatermarkHandler:
                 annot = page.first_annot
                 while annot:
                     next_annot = annot.next
-                    page.delete_annot(annot)
-                    removed_count += 1
+                    # 用户批注和高亮不等于水印，仅删除显式标记为水印的注释。
+                    if annot.type[1].lower() == "watermark":
+                        page.delete_annot(annot)
+                        removed_count += 1
                     annot = next_annot
 
             # 2. 清理内容流（删除文本和图片）
@@ -175,13 +177,15 @@ class PDFWatermarkHandler:
                             for keyword in keywords:
                                 instances = page.search_for(keyword)
                                 for inst in instances:
-                                    # 用白色矩形覆盖
-                                    page.draw_rect(inst, color=(1, 1, 1), fill=(1, 1, 1))
+                                    page.add_redact_annot(inst, fill=(1, 1, 1))
                                     removed_count += 1
                                     logger.debug(f"   Removed text: {keyword}")
 
                 except Exception as e:
                     logger.debug(f"   Page {page_num}: {e}")
+
+            if remove_text and keywords:
+                page.apply_redactions(images=0, graphics=0)
 
         # 保存
         logger.info(f"🗑️  Removed {removed_count} watermark objects")
@@ -366,6 +370,9 @@ class PDFWatermarkHandler:
 
         logger.info("")
 
+        # 没有指定关键词时使用检测模型，避免对可编辑 PDF 执行空操作。
+        if is_editable and auto_detect and not kwargs.get("keywords"):
+            is_editable = False
         if is_editable:
             logger.info("📝 Processing as Editable PDF")
             # 过滤出可编辑 PDF 的参数

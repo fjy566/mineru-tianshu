@@ -154,6 +154,14 @@ const pageOcrScales = computed(() => {
   return scales
 })
 
+const coordinateScales = (pageId: number) => {
+  const page = pages.value.find(item => item.id === pageId)
+  const normalized = (layoutMap.value[pageId] || []).some(block => block._coordinate_system === 'normalized1000')
+  if (normalized && page) return { x: page.width / 1000, y: page.height / 1000 }
+  const scale = pageOcrScales.value[pageId] || globalScale.value
+  return { x: scale, y: scale }
+}
+
 const getBlockStyle = (pageId: number, bbox: any) => {
   if (!bbox || !Array.isArray(bbox) || bbox.length === 0) return { display: 'none' }
 
@@ -167,13 +175,13 @@ const getBlockStyle = (pageId: number, bbox: any) => {
     x0 = Math.min(...xs); y0 = Math.min(...ys); x1 = Math.max(...xs); y1 = Math.max(...ys);
   } else { return { display: 'none' } }
 
-  const s = pageOcrScales.value[pageId] || globalScale.value;
+  const scale = coordinateScales(pageId);
 
   return {
-    left: `${x0 * s}px`,
-    top: `${y0 * s}px`,
-    width: `${Math.max((x1 - x0) * s, 6)}px`,
-    height: `${Math.max((y1 - y0) * s, 6)}px`
+    left: `${x0 * scale.x}px`,
+    top: `${y0 * scale.y}px`,
+    width: `${Math.max((x1 - x0) * scale.x, 6)}px`,
+    height: `${Math.max((y1 - y0) * scale.y, 6)}px`
   }
 }
 
@@ -251,7 +259,7 @@ const loadPdf = async (url: string) => {
       ? { Authorization: `Bearer ${authStore.token}` }
       : {}
     const loadingTask = pdfjsLib.getDocument({ url, httpHeaders, isEvalSupported: false })
-    loadingTask.onProgress = (p) => { if (p.total) progress.value = 10 + (p.loaded / p.total) * 60 }
+    loadingTask.onProgress = (p: {loaded: number; total: number}) => { if (p.total) progress.value = 10 + (p.loaded / p.total) * 60 }
     pdfProxy = await loadingTask.promise
     totalPages.value = pdfProxy.numPages
     progress.value = 80
@@ -262,6 +270,8 @@ const loadPdf = async (url: string) => {
     loading.value = false; progress.value = 100
   }
 }
+
+const retry = () => { if (props.src) void loadPdf(props.src) }
 
 // 轮询等待宽度，然后算出包含 top 与 height 的骨架
 const buildPageSkeletons = async (retryCount = 0) => {
@@ -352,7 +362,7 @@ const highlightBlock = (pageIndex: number, bbox: any) => {
     if (bbox && bbox.length === 4) {
       blockY = typeof bbox[0] === 'number' ? bbox[1] : Math.min(...bbox.map((p:any)=>p[1]))
     }
-    const s = pageOcrScales.value[pageIndex] || globalScale.value;
+    const s = coordinateScales(pageIndex).y;
     const targetScroll = pageNode.top + (blockY * s) - (containerHeight.value / 3)
 
     scrollContainer.value.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' })

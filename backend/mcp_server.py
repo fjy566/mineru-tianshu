@@ -130,6 +130,22 @@ class MCPAuthMiddleware:
         await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
 
 
+class MCPTransportEndpoint:
+    """直接挂载 ASGI 传输，避免 Starlette 再次调用空 Response。"""
+
+    def __init__(self, transport, server, messages=False):
+        self.transport = transport
+        self.server = server
+        self.messages = messages
+
+    async def __call__(self, scope, receive, send):
+        if self.messages:
+            await self.transport.handle_post_message(scope, receive, send)
+        else:
+            async with self.transport.connect_sse(scope, receive, send) as streams:
+                await self.server.run(streams[0], streams[1], self.server.create_initialization_options())
+
+
 # 初始化 MCP Server
 app = Server("mineru-tianshu")
 
@@ -803,15 +819,6 @@ async def main():
     )
     sse = SseServerTransport("/messages", security_settings=security_settings)
 
-    # SSE 处理函数
-    async def handle_sse(request):
-        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
-            await app.run(streams[0], streams[1], app.create_initialization_options())
-
-    # POST 消息处理函数
-    async def handle_messages(request):
-        await sse.handle_post_message(request.scope, request.receive, request._send)
-
     # 健康检查端点（公开，不返回版本号、工具列表、端点结构等可被用于信息收集的内容）
     async def health_check(request):
         return JSONResponse({"status": "healthy"})
@@ -819,8 +826,8 @@ async def main():
     # 创建 Starlette 应用，受保护端点外挂鉴权中间件
     starlette_app = Starlette(
         routes=[
-            Route("/sse", endpoint=handle_sse),
-            Route("/messages", endpoint=handle_messages, methods=["POST"]),
+            Route("/sse", endpoint=MCPTransportEndpoint(sse, app)),
+            Route("/messages", endpoint=MCPTransportEndpoint(sse, app, messages=True), methods=["POST"]),
             Route("/health", endpoint=health_check, methods=["GET"]),
             Route("/", endpoint=health_check, methods=["GET"]),  # 根路径也返回健康检查
         ]

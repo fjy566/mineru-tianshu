@@ -112,6 +112,7 @@
 
                     <optgroup :label="$t('task.groupProfessional')">
                       <option value="fasta">{{ $t('task.backendFasta') }}</option>
+                      <option value="fastq">{{ $t('task.backendFastq') }}</option>
                       <option value="genbank">{{ $t('task.backendGenBank') }}</option>
                     </optgroup>
                   </select>
@@ -171,18 +172,18 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
                   <label class="flex items-center cursor-pointer mb-1">
-                    <input v-model="config.table_enable" type="checkbox" class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500" />
+                    <input v-model="config.table_enable" type="checkbox" disabled class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500" />
                     <span class="ml-2 text-sm font-medium text-gray-900">{{ $t('task.enableTableRecognition') }}</span>
                   </label>
-                  <p class="text-xs text-gray-500 pl-6">{{ $t('task.tableRecognitionDisabledHint') }}</p>
+                  <p class="text-xs text-gray-500 pl-6">{{ $t('task.mineru4AutomaticRecognition') }}</p>
                 </div>
 
                 <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
                   <label class="flex items-center cursor-pointer mb-1">
-                    <input v-model="config.formula_enable" type="checkbox" class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500" />
+                    <input v-model="config.formula_enable" type="checkbox" disabled class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500" />
                     <span class="ml-2 text-sm font-medium text-gray-900">{{ formulaLabel }}</span>
                   </label>
-                  <p class="text-xs text-gray-500 pl-6">{{ formulaDescription }}</p>
+                  <p class="text-xs text-gray-500 pl-6">{{ $t('task.mineru4AutomaticRecognition') }}</p>
                 </div>
               </div>
 
@@ -239,6 +240,9 @@
                           <span class="ml-2 text-sm font-medium text-gray-800">{{ $t('task.enableWatermarkRemoval') }}</span>
                         </label>
                         <div v-if="config.remove_watermark" class="pl-6 pt-1 space-y-2 animate-fade-in">
+                           <label class="block text-xs text-gray-600">{{ $t('task.watermarkKeywords') }}
+                             <input v-model="config.watermark_keywords" type="text" class="form-input-sm mt-1 w-full" :placeholder="$t('task.watermarkKeywordsHint')" />
+                           </label>
                            <div class="flex items-center justify-between text-xs text-gray-500">
                              <span>{{ $t('task.watermarkConfidence') }}: <span class="font-mono text-purple-600">{{ config.watermark_conf_threshold }}</span></span>
                            </div>
@@ -262,40 +266,8 @@
                    </div>
                 </div>
 
-                <div v-if="isMinerUBackend">
-                  <div class="pt-2 border-t border-dashed border-gray-200 mt-2">
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{{ $t('task.outputSettings') }}</label>
-                    <div class="grid grid-cols-2 gap-3 bg-white p-3 rounded border border-gray-200">
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.draw_layout_bbox" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.drawLayout') }}
-                       </label>
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.draw_span_bbox" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.drawSpan') }}
-                       </label>
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.dump_markdown" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.dumpMarkdown') }}
-                       </label>
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.dump_middle_json" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.dumpMiddleJson') }}
-                       </label>
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.dump_model_output" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.dumpModelOutput') }}
-                       </label>
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.dump_content_list" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.dumpContentList') }}
-                       </label>
-                       <label class="flex items-center cursor-pointer text-xs text-gray-600 hover:text-gray-900">
-                          <input v-model="config.dump_orig_pdf" type="checkbox" class="mr-2 rounded border-gray-300" />
-                          {{ $t('task.dumpOrigPdf') }}
-                       </label>
-                    </div>
-                  </div>
+                <div v-if="isMinerUBackend" class="text-xs text-gray-500 border-t border-gray-200 pt-3">
+                  {{ $t('task.mineru4OutputNote') }}
                 </div>
 
               </div>
@@ -389,7 +361,7 @@ const submitProgress = ref<SubmitProgress[]>([])
 const presets = computed(() => [
   { id: 'default', name: t('task.presetGeneral'), desc: t('task.presetGeneralDesc'), icon: '📄', config: { backend: 'pipeline', method: 'auto', formula_enable: true, table_enable: true } },
   { id: 'academic', name: t('task.presetAcademic'), desc: t('task.presetAcademicDesc'), icon: '🎓', config: { backend: 'hybrid-auto-engine', method: 'auto', formula_enable: true, table_enable: true } },
-  { id: 'scanned', name: t('task.presetScanned'), desc: t('task.presetScannedDesc'), icon: '🖨️', config: { backend: 'hybrid-auto-engine', method: 'ocr', formula_enable: false, table_enable: true } },
+  { id: 'scanned', name: t('task.presetScanned'), desc: t('task.presetScannedDesc'), icon: '🖨️', config: { backend: 'hybrid-auto-engine', method: 'ocr', formula_enable: true, table_enable: true } },
   { id: 'complex', name: t('task.presetComplex'), desc: t('task.presetComplexDesc'), icon: '📊', config: { backend: 'vlm-auto-engine', method: 'auto', formula_enable: true, table_enable: true } },
 ])
 
@@ -407,6 +379,7 @@ const defaultConfig = {
   remove_watermark: false,
   watermark_conf_threshold: 0.35,
   watermark_dilation: 10,
+  watermark_keywords: '',
 
   // 音视频
   keep_audio: false,
@@ -435,7 +408,8 @@ const config = reactive({ ...defaultConfig })
 function applyPreset(preset: any) {
   currentPreset.value = preset.id
   Object.assign(config, preset.config)
-  if (preset.id === 'scanned') config.remove_watermark = true
+  if (config.backend.includes('vlm') && !['ch', 'en'].includes(config.lang)) config.lang = 'ch'
+  config.remove_watermark = false
 }
 
 // 后端分类
@@ -443,7 +417,7 @@ const mineruBackends = ['pipeline', 'vlm-auto-engine', 'hybrid-auto-engine', 'vl
 const isMinerUBackend = computed(() => mineruBackends.includes(config.backend))
 const isHttpClientBackend = computed(() => ['vlm-http-client', 'hybrid-http-client'].includes(config.backend))
 
-const showLanguageOption = computed(() => isMinerUBackend.value || ['sensevoice', 'auto'].includes(config.backend))
+const showLanguageOption = computed(() => ['sensevoice', 'auto', 'fasta', 'fastq', 'genbank'].includes(config.backend))
 
 // 动态 Hint
 const currentBackendHint = computed(() => {
@@ -457,13 +431,13 @@ const currentBackendHint = computed(() => {
     'sensevoice': t('task.backendSenseVoiceHint'),
     'video': t('task.backendVideoHint'),
     'fasta': t('task.backendFastaHint'),
+    'fastq': t('task.backendFastqHint'),
     'genbank': t('task.backendGenBankHint')
   }
   return map[config.backend] || ''
 })
 
 const formulaLabel = computed(() => config.backend.includes('vlm') ? t('task.enableFormulaInterline') : (config.backend.includes('hybrid') ? t('task.enableFormulaInline') : t('task.enableFormulaRecognition')))
-const formulaDescription = computed(() => config.backend.includes('vlm') ? t('task.formulaDisabledHintInterline') : (config.backend.includes('hybrid') ? t('task.formulaDisabledHintInline') : t('task.formulaDisabledHintNormal')))
 
 // 完整语言列表
 const availableLanguages = computed(() => {
@@ -521,6 +495,8 @@ function onBackendChange() {
 onMounted(() => {
   const saved = localStorage.getItem('task_submit_config')
   if (saved) { try { const p = JSON.parse(saved); Object.assign(config, p); } catch(e){} }
+  config.formula_enable = true
+  config.table_enable = true
 })
 
 // 密码属敏感信息，不落 localStorage；其余配置正常持久化
@@ -533,9 +509,8 @@ function resetConfig() { Object.assign(config, defaultConfig); localStorage.remo
 
 function resetForm() {
     files.value = [];
-    if (fileUploader.value) {
-       // logic to clear uploader if exposed
-    }
+    fileUploader.value?.clearFiles()
+    config.password = ''
     submitProgress.value = [];
     submitting.value = false;
     errorMessage.value = '';
@@ -560,19 +535,21 @@ async function submitTasks() {
   submitting.value = true; errorMessage.value = ''
   submitProgress.value = files.value.map(f => ({ fileName: f.name, success: false, error: false }))
 
-  for (let i = 0; i < files.value.length; i++) {
+  const submittedFiles = [...files.value]
+  for (let i = 0; i < submittedFiles.length; i++) {
     try {
       const submitConfig = { ...config }
       if (submitConfig.end_page === undefined) delete (submitConfig as any).end_page
 
-      const response = await taskStore.submitTask({ file: files.value[i], ...submitConfig })
+      const response = await taskStore.submitTask({ file: submittedFiles[i], ...submitConfig })
       submitProgress.value[i].success = true; submitProgress.value[i].taskId = response.task_id
     } catch (err: any) {
-      submitProgress.value[i].error = true; submitProgress.value[i].errorMsg = err.message
+      submitProgress.value[i].error = true
+      submitProgress.value[i].errorMsg = err?.response?.data?.detail || err.message
     }
   }
   submitting.value = false
-  if (submitProgress.value.every(p => p.success) && files.value.length === 1) {
+  if (submitProgress.value.every(p => p.success) && submittedFiles.length === 1) {
     setTimeout(() => { router.push(`/tasks/${submitProgress.value[0].taskId}`) }, 500)
   }
 }

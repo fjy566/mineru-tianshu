@@ -49,6 +49,8 @@ ALLOWED_UPLOAD_EXTENSIONS = {
     ".faa",
     ".frn",
     ".fas",
+    ".fastq",
+    ".fq",
     ".gb",
     ".gbk",
     ".genbank",

@@ -108,7 +108,8 @@ apiClient.interceptors.response.use(
 
         // 如果不是登录/注册页面，跳转到登录页
         if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-          window.location.href = '/login'
+          const redirect = window.location.pathname + window.location.search + window.location.hash
+          window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`
         }
       }
 

@@ -14,9 +14,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import katex from 'katex'
@@ -47,25 +48,21 @@ const props = defineProps<{
 }>()
 
 // 配置 marked
-marked.setOptions({
-  highlight: function(code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return hljs.highlight(code, { language: lang }).value
-      } catch (err) {
-        console.error('Highlight error:', err)
-      }
+marked.setOptions({ breaks: true, gfm: true })
+marked.use({
+  renderer: {
+    code({ text, lang }) {
+      const language = lang && hljs.getLanguage(lang) ? lang : undefined
+      const highlighted = language ? hljs.highlight(text, { language }).value : hljs.highlightAuto(text).value
+      return `<pre><code class="hljs">${highlighted}</code></pre>`
     }
-    return hljs.highlightAuto(code).value
-  },
-  breaks: true,
-  gfm: true,
+  }
 })
 
 const renderedContent = computed(() => {
   if (!props.content) return ''
   try {
-    let html = marked.parse(props.content)
+    let html = marked.parse(props.content, { async: false })
 
     // 先渲染块级公式 $$...$$ (支持多行)
     html = html.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
@@ -116,7 +113,8 @@ const renderedContent = computed(() => {
       }
     })
 
-    return withAuthToken(html)
+    // 文档中的 HTML 属于不可信输入，保留表格与公式，移除脚本、事件和危险链接。
+    return withAuthToken(DOMPurify.sanitize(html, { ADD_ATTR: ['target'] }))
   } catch (err) {
     console.error('Markdown parse error:', err)
     return `<p class="text-red-600">${t('markdownViewer.parseError')}</p>`

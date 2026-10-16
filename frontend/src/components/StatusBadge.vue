@@ -23,6 +23,7 @@ const statusText = computed(() => {
 const badgeClass = computed(() => {
   const classMap: Record<TaskStatus, string> = {
     pending: 'bg-gray-100 text-gray-800',
+    paused: 'bg-blue-100 text-blue-800',
     processing: 'bg-yellow-100 text-yellow-800',
     completed: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800',
@@ -34,6 +35,7 @@ const badgeClass = computed(() => {
 const dotClass = computed(() => {
   const classMap: Record<TaskStatus, string> = {
     pending: 'bg-gray-400',
+    paused: 'bg-blue-400',
     processing: 'bg-yellow-400 animate-pulse',
     completed: 'bg-green-500',
     failed: 'bg-red-500',

@@ -164,6 +164,9 @@
   - **GenBank 格式**：NCBI 基因序列注释格式
     - 完整的注释信息提取
     - 特征类型统计（gene/CDS/mRNA 等）
+  - **FASTQ 格式**：测序 reads 与质量值解析
+    - 流式统计 reads 数量、长度分布、碱基组成与 GC 含量
+    - 计算平均 Phred、Q20/Q30 与逐位置质量值
     - GC 含量计算和生物物种信息
   - 支持 BioPython 或内置解析器（可选依赖）
   - 详见：`backend/format_engines/README.md`
@@ -229,7 +232,7 @@ MinerU Tianshu（天枢）是一个**企业级 AI 数据预处理平台**，将�
 - **🎬 视频**: MP4、AVI、MKV → 语音转写 + 关键帧 OCR🧪（FFmpeg + SenseVoice）
 - **🎙️ 音频**: MP3、WAV、M4A → 文字转写 + 说话人识别（SenseVoice 多语言）
 - **🖼️ 图片**: JPG、PNG → 文字提取 + 结构化（多 OCR 引擎 + 水印去除🧪）
-- **🧬 生物格式**: FASTA、GenBank → Markdown/JSON（插件化引擎，易扩展）
+- **🧬 生物格式**: FASTA、FASTQ、GenBank → Markdown/JSON（插件化引擎，易扩展）
 - **🏗️ 企业特性**: GPU 负载均衡、任务队列、JWT 认证、MCP 协议、现代化 Web 界面
 
 ## 📸 功能展示
@@ -277,7 +280,7 @@ MinerU Tianshu（天枢）是一个**企业级 AI 数据预处理平台**，将�
 - 🖼️ **图片**: JPG、PNG、BMP、TIFF（MinerU）
 - 🎙️ **音频**: MP3、WAV、M4A、FLAC（SenseVoice 多语言、说话人识别、情感识别）
 - 🎬 **视频**: MP4、AVI、MKV、MOV、WebM（音频转写 + 关键帧 OCR🧪）
-- 🧬 **生物格式**: FASTA、GenBank（序列统计、碱基分析、GC 含量）
+- 🧬 **生物格式**: FASTA、FASTQ、GenBank（序列统计、碱基分析、GC 含量、Q20/Q30）
 - 🌐 **其他**: HTML、Markdown、TXT、CSV
 
 ## 🏗️ 项目结构
@@ -295,7 +298,7 @@ mineru-server/
 │   ├── auth/              # 认证授权（JWT、SSO）
 │   ├── audio_engines/     # 音频引擎（SenseVoice）
 │   ├── video_engines/     # 视频引擎（FFmpeg + OCR）
-│   ├── format_engines/    # 格式引擎（FASTA、GenBank）
+│   ├── format_engines/    # 格式引擎（FASTA、FASTQ、GenBank）
 │   ├── remove_watermark/  # 水印去除（YOLO11x + LaMa）
 │   └── requirements.txt
 │

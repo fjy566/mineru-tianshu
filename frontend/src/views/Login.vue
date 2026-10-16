@@ -89,12 +89,13 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores'
 import { getSystemConfig, type SystemConfig } from '@/api'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const { t } = useI18n()
 
@@ -114,8 +115,10 @@ const systemConfig = ref<SystemConfig>({
 async function handleLogin() {
   const success = await authStore.login(form)
   if (success) {
-    // 登录成功，跳转到首页
-    router.push('/')
+    const redirect = route.query.redirect
+    const target = typeof redirect === 'string' && redirect.startsWith('/') &&
+      !redirect.startsWith('//') && !redirect.includes('\\') ? redirect : '/'
+    await router.replace(target)
   }
 }
 

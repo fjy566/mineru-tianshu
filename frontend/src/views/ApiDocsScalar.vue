@@ -289,12 +289,11 @@ watch(locale, async () => {
 // Scalar 配置（响应式）
 const scalarConfig = computed(() => ({
   // OpenAPI 规范（使用翻译后的版本）
-  spec: {
-    content: openApiSpec.value,
-  },
+  content: openApiSpec.value,
 
   // 主题配置 - 使用 Scalar 默认主题
   theme: 'default',
+  agent: { disabled: true },
 
   // 布局配置 - 使用现代布局
   layout: 'modern' as 'modern',
@@ -314,14 +313,9 @@ const scalarConfig = computed(() => ({
 
   // 认证配置
   authentication: {
-    preferredSecurityScheme: 'bearerAuth',
-    http: {
-      bearer: {
-        token: authStore.token || '',
-      },
-    },
-    apiKey: {
-      token: authStore.token || '',
+    preferredSecurityScheme: 'HTTPBearer',
+    securitySchemes: {
+      HTTPBearer: { token: authStore.token || '' },
     },
   },
 

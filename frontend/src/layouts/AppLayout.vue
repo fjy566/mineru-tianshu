@@ -122,6 +122,8 @@
             <div class="relative hidden sm:block" ref="userMenuRef">
               <button
                 @click="userMenuOpen = !userMenuOpen"
+                :aria-label="$t('common.profile')"
+                :aria-expanded="userMenuOpen"
                 class="flex items-center gap-2 h-10 px-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 border border-transparent hover:border-gray-300"
               >
                 <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold shadow-sm">
@@ -195,6 +197,8 @@
             <!-- 移动端菜单按钮 -->
             <button
               @click="mobileMenuOpen = !mobileMenuOpen"
+              :aria-label="$t('nav.dashboard') + ' / Menu'"
+              :aria-expanded="mobileMenuOpen"
               class="md:hidden h-10 w-10 grid place-items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
             >
               <Menu v-if="!mobileMenuOpen" class="w-6 h-6" />
@@ -426,10 +430,11 @@ function handleChangeLocale(newLocale: SupportLocale) {
 }
 
 // 退出登录
-function handleLogout() {
+async function handleLogout() {
   userMenuOpen.value = false
-  authStore.logout()
-  router.push('/login')
+  mobileMenuOpen.value = false
+  await authStore.logout()
+  await router.replace('/login')
 }
 
 // 处理 Logo 加载错误

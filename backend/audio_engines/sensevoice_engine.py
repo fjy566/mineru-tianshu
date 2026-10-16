@@ -21,6 +21,9 @@ SenseVoice 语音识别引擎
 """
 
 import json
+import math
+import re
+import subprocess
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from threading import Lock
@@ -230,6 +233,7 @@ class SenseVoiceEngine:
         Returns:
             解析结果（JSON格式，包含说话人信息）
         """
+        language = {"ch": "zh", "chinese_cht": "zh", "japan": "ja", "korean": "ko"}.get(language, language)
         audio_path = Path(audio_path)
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -260,7 +264,8 @@ class SenseVoiceEngine:
                     cache={},
                     language=language,
                     use_itn=use_itn,
-                    batch_size=60,
+                    batch_size_s=60,
+                    output_timestamp=True,
                     merge_vad=True,  # 合并VAD结果
                     merge_length_s=15,  # 合并长度
                 )
@@ -603,6 +608,38 @@ class SenseVoiceEngine:
             },
         }
 
+    def _audio_duration(self, audio_path: Path) -> float:
+        try:
+            import soundfile
+
+            duration = float(soundfile.info(str(audio_path)).duration)
+            if math.isfinite(duration) and duration > 0:
+                return duration
+        except Exception:
+            pass
+        try:
+            probe = subprocess.run(
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=nw=1:nk=1",
+                    str(audio_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=15,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            duration = float(probe.stdout.strip())
+            return duration if math.isfinite(duration) and duration > 0 else 0
+        except Exception:
+            return 0
+
     def _parse_result(self, result: List[Dict], audio_path: Path) -> Dict[str, Any]:
         """
         解析 FunASR 的原始结果为标准化格式
@@ -614,96 +651,79 @@ class SenseVoiceEngine:
         Returns:
             标准化的 JSON 结果
         """
-        if not result or len(result) == 0:
-            return {
-                "format": "audio",
-                "audio_file": audio_path.name,
-                "transcript": "",
-                "segments": [],
-                "metadata": {
-                    "duration": 0,
-                    "language": "unknown",
-                    "speaker_count": 0,
-                },
-            }
-
-        # 获取第一个结果（通常只有一个）
-        first_result = result[0]
-
-        # 提取文本
-        transcript = first_result.get("text", "")
-
-        # 提取时间戳（如果有）
-        timestamp = first_result.get("timestamp", [])
-
-        # 提取语言标签
-        language_tags = first_result.get("language", [])
-
-        # 提取情感标签
-        emotion_tags = first_result.get("emotion", [])
-
-        # 构建语音段列表
+        transcripts = []
+        raw_transcripts = []
         segments = []
-        if timestamp:
-            # timestamp 格式: [[word_index, start_ms, end_ms], ...]
-            for i, ts in enumerate(timestamp):
-                # ts 可能是 [start, end] 或 [word_idx, start, end]
-                if len(ts) == 3:
-                    word_idx, start_ms, end_ms = ts
-                elif len(ts) == 2:
-                    start_ms, end_ms = ts
-                    word_idx = i
-                else:
-                    continue
-
-                # 从完整文本中提取对应的词（简化处理）
-                words = transcript.split()
-                if word_idx < len(words):
-                    text = words[word_idx]
-                else:
-                    text = ""
-
-                # 获取语言和情感（如果有）
-                lang = language_tags[i] if i < len(language_tags) else "unknown"
-                emotion = emotion_tags[i] if i < len(emotion_tags) else "neutral"
-
+        languages = []
+        emotion_enabled = False
+        language_codes = {"zh", "en", "yue", "ja", "ko", "nospeech"}
+        emotion_codes = {"NEUTRAL", "HAPPY", "SAD", "ANGRY", "FEARFUL", "DISGUSTED", "SURPRISED", "EMO_UNKNOWN"}
+        for item in result or []:
+            raw = item.get("text", "")
+            raw_transcripts.append(raw)
+            tags = re.findall(r"<\|([^|]+)\|>", raw)
+            text = re.sub(r"<\|[^|]+\|>", "", raw).strip()
+            if not text:
+                continue
+            transcripts.append(text)
+            language_tags = item.get("language") or [tag for tag in tags if tag in language_codes]
+            emotion_tags = item.get("emotion") or [tag.lower() for tag in tags if tag in emotion_codes]
+            if isinstance(language_tags, str):
+                language_tags = [language_tags]
+            if isinstance(emotion_tags, str):
+                emotion_tags = [emotion_tags]
+            language = language_tags[0] if language_tags else "unknown"
+            emotion = emotion_tags[0] if emotion_tags else "neutral"
+            if language != "unknown" and language not in languages:
+                languages.append(language)
+            emotion_enabled = emotion_enabled or bool(emotion_tags)
+            timestamp = item.get("timestamp") or []
+            words = item.get("words") or []
+            valid_times = [
+                ts
+                for ts in timestamp
+                if isinstance(ts, (list, tuple))
+                and len(ts) in (2, 3)
+                and all(isinstance(value, (int, float)) and math.isfinite(value) for value in ts[-2:])
+                and 0 <= ts[-2] <= ts[-1]
+            ]
+            # 仅使用模型返回的词与坐标配对，避免按空格切分后丢失中文或错配时间。
+            if valid_times and len(valid_times) == len(timestamp) == len(words):
+                for word, ts in zip(words, valid_times):
+                    segments.append(
+                        {
+                            "start": ts[-2] / 1000,
+                            "end": ts[-1] / 1000,
+                            "text": str(word),
+                            "language": language,
+                            "emotion": emotion,
+                        }
+                    )
+            else:
                 segments.append(
                     {
-                        "start": start_ms / 1000.0,  # 转换为秒
-                        "end": end_ms / 1000.0,
+                        "start": min(ts[-2] for ts in valid_times) / 1000 if valid_times else 0,
+                        "end": max(ts[-1] for ts in valid_times) / 1000 if valid_times else 0,
                         "text": text,
-                        "language": lang,
+                        "language": language,
                         "emotion": emotion,
                     }
                 )
-        else:
-            # 没有时间戳信息，创建一个单一段落
-            segments.append(
-                {
-                    "start": 0,
-                    "end": 0,
-                    "text": transcript,
-                    "language": language_tags[0] if language_tags else "unknown",
-                    "emotion": emotion_tags[0] if emotion_tags else "neutral",
-                }
-            )
-
-        # 计算总时长
-        duration = segments[-1]["end"] if segments else 0
-
-        # 检测语言
-        detected_language = language_tags[0] if language_tags else "auto"
-
+        transcript = "\n".join(transcripts)
+        duration = self._audio_duration(audio_path) or max((segment["end"] for segment in segments), default=0)
         return {
             "format": "audio",
             "audio_file": audio_path.name,
             "transcript": transcript,
+            "raw_transcript": "\n".join(raw_transcripts),
             "segments": segments,
             "metadata": {
                 "duration": duration,
-                "language": detected_language,
-                "speaker_count": 1,  # 基础模式默认为1个说话人
-                "emotion_enabled": bool(emotion_tags),
+                "language": languages[0] if len(languages) == 1 else "mixed" if languages else "unknown",
+                "languages": languages,
+                "speaker_count": 1 if transcript else 0,
+                "emotion_enabled": emotion_enabled,
+                "timestamps_available": any(segment["end"] > segment["start"] for segment in segments),
             },
         }
 

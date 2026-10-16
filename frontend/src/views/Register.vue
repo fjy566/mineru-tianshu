@@ -121,7 +121,7 @@
           <!-- 注册按钮 -->
           <button
             type="submit"
-            :disabled="authStore.loading || (confirmPassword && confirmPassword !== form.password)"
+            :disabled="authStore.loading || (!!confirmPassword && confirmPassword !== form.password)"
             class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-6"
           >
             <span v-if="!authStore.loading">{{ $t('auth.registerButton') }}</span>

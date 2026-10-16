@@ -6,7 +6,7 @@ MinerU Tianshu - Authentication Routes
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request, UploadFile, File
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from typing import List
 from datetime import datetime, timedelta
 from loguru import logger
@@ -1036,6 +1036,22 @@ async def list_webhook_deliveries(
     return {"success": True, "data": {"items": items, "total": total, "page": page, "page_size": page_size}}
 
 
+@router.get("/system/logo/{name}")
+def get_system_logo(name: str):
+    """公开品牌图片；随机文件名与固定目录隔离，不接收任意文件路径。"""
+    import re
+    from pathlib import Path
+
+    if not re.fullmatch(r"[a-f0-9]{32}\.(png|jpg|jpeg|svg|gif|webp)", name):
+        raise HTTPException(status_code=404, detail="Logo not found")
+    path = Path(SystemConfig().db_path).parent / "system-assets" / name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Logo not found")
+    return FileResponse(
+        path, headers={"X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox"}
+    )
+
+
 @router.post("/system/logo/upload")
 async def upload_system_logo(
     file: UploadFile = File(...),
@@ -1064,6 +1080,38 @@ async def upload_system_logo(
     if len(content) > 5 * 1024 * 1024:  # 5MB
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File size exceeds 5MB limit")
 
+    if not content:
+        raise HTTPException(status_code=400, detail="Logo file is empty")
+    try:
+        if file_ext == ".svg":
+            from defusedxml.ElementTree import fromstring
+
+            if fromstring(content).tag.split("}")[-1] != "svg":
+                raise ValueError("Invalid SVG")
+        else:
+            import io
+            from PIL import Image
+
+            with Image.open(io.BytesIO(content)) as image:
+                image.verify()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Logo is not a valid image")
+
+    import os
+
+    if os.getenv("RUSTFS_ENABLED", "true").lower() not in {"true", "1", "yes"}:
+        import uuid
+
+        assets = Path(SystemConfig().db_path).parent / "system-assets"
+        assets.mkdir(parents=True, exist_ok=True)
+        name = uuid.uuid4().hex + file_ext
+        (assets / name).write_bytes(content)
+        return {
+            "success": True,
+            "message": "Logo uploaded; save settings to apply",
+            "logo_url": f"/api/v1/auth/system/logo/{name}",
+        }
+
     try:
         # 创建临时文件保存上传的图片
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
@@ -1079,10 +1127,6 @@ async def upload_system_logo(
 
         # 清理临时文件
         Path(tmp_file_path).unlink()
-
-        # 更新系统配置
-        config = SystemConfig()
-        config.set_config("system_logo", logo_url)
 
         logger.info(f"✅ Logo uploaded by {current_user.username}: {logo_url}")
 

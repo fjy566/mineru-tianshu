@@ -276,19 +276,27 @@ class VideoProcessingEngine:
             logger.info("📥 Step 1/3: Extracting audio from video...")
             logger.info("=" * 60)
 
-            audio_path = self.extract_audio(video_path=str(video_path), audio_format="wav")
-
-            # 步骤 2: 音频转文字
-            logger.info("=" * 60)
-            logger.info("📝 Step 2/3: Transcribing audio...")
-            logger.info("=" * 60)
-
-            audio_engine = self._load_audio_engine()
-
-            # 使用 SenseVoice 进行语音识别
-            audio_result = audio_engine.parse(
-                audio_path=audio_path, output_path=str(output_path), language=language, use_itn=use_itn, **kwargs
+            # 无音轨的视频仍可提取关键帧；音频保存在当前任务目录中。
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
+                 "-of", "json", str(video_path)], capture_output=True, text=True, timeout=30,
             )
+            if probe.returncode != 0:
+                raise ValueError("视频无法读取，请检查文件是否完整")
+            has_audio = bool(json.loads(probe.stdout).get("streams"))
+            audio_path = None
+            if has_audio:
+                audio_path = self.extract_audio(
+                    video_path=str(video_path), output_path=str(output_path / "audio.wav"), audio_format="wav"
+                )
+                audio_engine = self._load_audio_engine()
+                audio_result = audio_engine.parse(
+                    audio_path=audio_path, output_path=str(output_path), language=language, use_itn=use_itn, **kwargs
+                )
+            else:
+                enable_keyframe_ocr = True
+                audio_result = {"markdown": "# 视频解析\n\n未检测到音轨，已使用关键帧文字识别。\n",
+                                "json_data": {"segments": [], "metadata": {"audio_present": False}}}
 
             # 步骤 3: 关键帧OCR（可选）
             keyframe_result = None
@@ -321,6 +329,7 @@ class VideoProcessingEngine:
             if result.get("json_data"):
                 json_data = result["json_data"]
                 json_data["type"] = "video"
+                json_data.setdefault("source", {})
                 json_data["source"]["file_type"] = "video"
                 json_data["source"]["video_format"] = video_path.suffix[1:]
                 json_data["source"]["original_filename"] = video_path.name
@@ -420,13 +429,13 @@ class VideoProcessingEngine:
                 result["json_file"] = str(content_json_file)
 
             # 步骤 5: 清理临时音频文件（可选）
-            if not keep_audio:
+            if audio_path and not keep_audio:
                 try:
                     Path(audio_path).unlink()
                     logger.info(f"🗑️  Temporary audio file deleted: {Path(audio_path).name}")
                 except Exception:
                     pass
-            else:
+            elif audio_path:
                 logger.info(f"💾 Audio file kept: {audio_path}")
 
             logger.info("=" * 60)

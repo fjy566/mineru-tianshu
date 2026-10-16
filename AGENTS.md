@@ -11,7 +11,7 @@ MinerU Tianshu（天枢）是一个**企业级 AI 数据预处理平台**，将�
 - 🖼️ 图片：JPG、PNG、BMP、TIFF（多 OCR 引擎 + 水印去除🧪）
 - 🎙️ 音频：MP3、WAV、M4A、FLAC（SenseVoice 多语言、说话人识别、情感识别）
 - 🎬 视频：MP4、AVI、MKV、MOV、WebM（FFmpeg 音频提取转写 + 关键帧 OCR🧪）
-- 🧬 生物格式：FASTA、GenBank（插件化格式引擎）
+- 🧬 生物格式：FASTA、FASTQ、GenBank（插件化格式引擎）
 - 🏗️ 企业特性：GPU 负载均衡、任务队列、JWT 认证、API Key、MCP 协议、RustFS 对象存储
 
 ## 技术栈
@@ -52,7 +52,7 @@ mineru-tianshu/
 │   ├── mineru_pipeline/       # MinerU 引擎封装
 │   ├── audio_engines/         # SenseVoice 音频引擎
 │   ├── video_engines/         # 视频引擎（FFmpeg + 关键帧提取，OCR 走 MinerU）
-│   ├── format_engines/        # 插件化格式引擎（FASTA、GenBank 为参考实现）
+│   ├── format_engines/        # 插件化格式引擎（FASTA、FASTQ、GenBank）
 │   ├── remove_watermark/      # 水印去除（YOLO11x + LaMa）
 │   ├── image_caption/         # 图片描述（多模态大模型，OpenAI 兼容接口，配置存 system_config 表）
 │   ├── webhook/               # Webhook 任务通知（投递表 + HMAC 签名 + SSRF 防护，调度器周期投递）
@@ -176,7 +176,7 @@ npm run build     # tsc && vite build → dist/
 
 ### 格式引擎插件系统
 
-新增文档格式：继承 `backend/format_engines/base.py` 的 `FormatEngine`，设置 `SUPPORTED_EXTENSIONS` / `FORMAT_NAME` / `FORMAT_DESCRIPTION`，实现 `parse()` 返回 `{format, markdown, json_content, metadata, summary}`，然后在 `format_engines/__init__.py` 中注册。注册后同时支持显式 `backend` 值和 `auto` 检测，并出现在 `GET /api/v1/engines` 中。FASTA 和 GenBank 是参考实现。
+新增文档格式：继承 `backend/format_engines/base.py` 的 `FormatEngine`，设置 `SUPPORTED_EXTENSIONS` / `FORMAT_NAME` / `FORMAT_DESCRIPTION`，实现 `parse()` 返回 `{format, markdown, json_content, metadata, summary}`，然后在 `format_engines/__init__.py` 中注册。注册后同时支持显式 `backend` 值和 `auto` 检测，并出现在 `GET /api/v1/engines` 中。FASTA、FASTQ 和 GenBank 是参考实现。
 
 ### Webhook 与审计日志
 
@@ -233,7 +233,19 @@ npm run build     # tsc && vite build → dist/
 
 ## 测试策略
 
-**本项目没有自动化测试套件**（无 pytest、无前端单测）。质量门禁是 pre-commit，也是唯一的 CI 任务（`.github/workflows/pylint.yml`，GitHub Actions 中实际运行的是 pre-commit action）：
+后端测试位于 `backend/tests/`，包含单元测试和使用临时数据库、临时上传/输出目录的 API 集成测试。开发依赖见 `backend/requirements-dev.txt`；其中 `onnx` 用于生成 ONNX Runtime 会话测试模型。Windows 本机测试请使用项目 `.venv`，不要将测试配置写入运行中的数据库。
+
+```powershell
+& '.venv/Scripts/python.exe' -m pip install -r backend/requirements-dev.txt
+& '.venv/Scripts/python.exe' -m pytest backend/tests -q
+Set-Location frontend
+npm run typecheck
+npm run build
+```
+
+`npm run build` 先执行 `vue-tsc --noEmit`，检查 Vue 模板和 TypeScript，再执行 Vite 构建。当前没有前端自动化组件测试套件，浏览器交互需要另行验收。真实格式转换使用合成样本，并记录任务状态、Markdown 标记和结构化数据；外部服务需要真实配置后单独验收。
+
+现有 CI 工作流 `.github/workflows/pylint.yml` 运行 pre-commit：
 
 ```bash
 pip install pre-commit && pre-commit install

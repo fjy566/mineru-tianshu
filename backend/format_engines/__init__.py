@@ -11,6 +11,7 @@ Format Engines - 格式引擎插件系统
 
 from .base import FormatEngine, FormatEngineRegistry
 from .fasta_engine import FASTAEngine
+from .fastq_engine import FASTQEngine
 from .genbank_engine import GenBankEngine
 
 # 自动注册所有引擎
@@ -18,5 +19,6 @@ __all__ = [
     "FormatEngine",
     "FormatEngineRegistry",
     "FASTAEngine",
+    "FASTQEngine",
     "GenBankEngine",
 ]

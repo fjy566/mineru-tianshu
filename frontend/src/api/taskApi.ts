@@ -66,6 +66,8 @@ export async function submitTask(request: SubmitTaskRequest): Promise<SubmitTask
   if (request.watermark_conf_threshold !== undefined) formData.append('watermark_conf_threshold', String(request.watermark_conf_threshold))
   if (request.watermark_dilation !== undefined) formData.append('watermark_dilation', String(request.watermark_dilation))
 
+  if (request.watermark_keywords) formData.append('watermark_keywords', request.watermark_keywords)
+
   // Audio 专属参数 (SenseVoice)
   if (request.enable_speaker_diarization !== undefined) formData.append('enable_speaker_diarization', String(request.enable_speaker_diarization))
 
@@ -171,5 +173,11 @@ export async function clearTaskCache(taskId: string): Promise<ApiResponse> {
  */
 export async function clearFailedTasks(): Promise<{ status: string; deleted_count: number }> {
   const response = await apiClient.delete<{ status: string; deleted_count: number }>('/api/v1/tasks/failed/clear')
+  return response.data
+}
+
+/** 删除任务与其文件。 */
+export async function deleteTask(taskId: string): Promise<ApiResponse> {
+  const response = await apiClient.delete<ApiResponse>(`/api/v1/tasks/${taskId}`)
   return response.data
 }

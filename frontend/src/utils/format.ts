@@ -103,6 +103,7 @@ export function formatBackendName(backend: string): string {
 
     // 专业格式
     'fasta': 'Bio: FASTA',
+    'fastq': 'Bio: FASTQ',
     'genbank': 'Bio: GenBank',
 
     // 兼容旧版

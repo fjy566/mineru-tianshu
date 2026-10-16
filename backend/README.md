@@ -281,6 +281,7 @@ export MINERU_VIRTUAL_VRAM_SIZE=6
 | `sensevoice` | SenseVoice | 音频转文字，说话人识别 | 音频处理 |
 | `video` | Video Engine | 视频处理，关键帧 OCR | 视频分析 |
 | `fasta` | FASTA Engine | 生物序列格式解析 | 生物信息学 |
+| `fastq` | FASTQ Engine | 测序 reads、碱基组成与质量统计 | 生物信息学 |
 | `genbank` | GenBank Engine | 基因序列格式解析 | 生物信息学 |
 
 ### Worker 主动拉取模式

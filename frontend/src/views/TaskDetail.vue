@@ -16,7 +16,7 @@
               <XCircle :class="{'animate-pulse': actionLoading && currentAction === 'cancel'}" class="w-4 h-4 mr-1.5" />
               <span>{{ $t('task.cancelTask') }}</span>
             </button>
-            <button v-if="task.status === 'failed'" @click="initiateAction('retry')" :disabled="actionLoading" class="btn btn-white text-blue-600 border-gray-200 hover:bg-blue-50 btn-sm flex items-center shadow-sm transition-all disabled:opacity-50">
+            <button v-if="['failed', 'cancelled'].includes(task.status)" @click="initiateAction('retry')" :disabled="actionLoading" class="btn btn-white text-blue-600 border-gray-200 hover:bg-blue-50 btn-sm flex items-center shadow-sm transition-all disabled:opacity-50">
               <RotateCw :class="{'animate-spin': actionLoading && currentAction === 'retry'}" class="w-4 h-4 mr-1.5" />
               <span>{{ $t('task.retryTask') }}</span>
             </button>
@@ -30,7 +30,7 @@
             </button>
         </template>
 
-        <div v-if="task?.status === 'completed' && pdfUrl && task?.result_path !== 'CLEARED'" class="flex items-center bg-gray-100 rounded-lg p-1">
+        <div v-if="task?.status === 'completed' && (pdfUrl || sourceImageUrl) && task?.result_path !== 'CLEARED'" class="flex items-center bg-gray-100 rounded-lg p-1">
           <button @click="setMode('single')" :class="['px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center', layoutMode === 'single' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700']">
             <FileText class="w-3.5 h-3.5 mr-1.5" /> {{ $t('task.singleColumnView') }}
           </button>
@@ -39,7 +39,7 @@
           </button>
         </div>
 
-        <button @click="refreshTask()" :disabled="loading" class="btn btn-secondary btn-sm shadow-sm"><RefreshCw :class="{ 'animate-spin': loading }" class="w-4 h-4" /></button>
+        <button @click="refreshTask()" :disabled="loading" :aria-label="$t('common.refresh')" class="btn btn-secondary btn-sm shadow-sm"><RefreshCw :class="{ 'animate-spin': loading }" class="w-4 h-4" /></button>
       </div>
     </div>
 
@@ -65,8 +65,8 @@
       <div v-else-if="['failed', 'cancelled'].includes(task.status)" class="max-w-3xl mx-auto mt-10 space-y-6 px-4">
          <div class="card p-8 text-center border-red-100 bg-red-50/50">
             <div class="flex justify-center mb-4"><div class="p-3 bg-red-100 rounded-full text-red-500"><AlertCircle class="w-8 h-8" /></div></div>
-            <h2 class="text-xl font-semibold text-red-700 mb-2">{{ $t('task.taskFailed') }}</h2>
-            <div class="text-red-600 bg-white p-4 rounded-lg border border-red-200 font-mono text-sm text-left overflow-auto max-h-64 break-all shadow-sm">{{ task.error_message || $t('error.unknownError') }}</div>
+            <h2 class="text-xl font-semibold text-red-700 mb-2">{{ task.status === 'cancelled' ? $t('status.cancelled') : $t('task.taskFailed') }}</h2>
+            <div class="text-red-600 bg-white p-4 rounded-lg border border-red-200 font-mono text-sm text-left overflow-auto max-h-64 break-all shadow-sm">{{ task.error_message || (task.status === 'cancelled' ? $t('status.cancelled') : $t('error.unknownError')) }}</div>
          </div>
       </div>
 
@@ -195,11 +195,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTaskStore, useAuthStore } from '@/stores'
-import { ArrowLeft, AlertCircle, RefreshCw, FileText, Columns, Download, RotateCw, Eraser, Pause, Image, Table, Trash2, XCircle } from 'lucide-vue-next'
+import { ArrowLeft, AlertCircle, RefreshCw, FileText, Columns, Download, RotateCw, Eraser, Image, Table, Trash2, XCircle } from 'lucide-vue-next'
 import StatusBadge from '@/components/StatusBadge.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
@@ -241,8 +241,8 @@ const sourceImageUrl = computed(() => {
   return token ? `${url}?token=${encodeURIComponent(token)}` : url
 })
 
-const showPdf = computed(() => layoutMode.value === 'split' || (layoutMode.value === 'single' && (pdfUrl.value || sourceImageUrl.value)))
-const showMarkdown = computed(() => layoutMode.value === 'split' || layoutMode.value !== 'single')
+const showPdf = computed(() => !!(pdfUrl.value || sourceImageUrl.value) && layoutMode.value === 'split')
+const showMarkdown = computed(() => true)
 
 const layoutData = computed(() => {
   const jsonContent = task.value?.data?.json_content
@@ -255,17 +255,24 @@ const layoutData = computed(() => {
       if (block.text) return block.text
       const c = block.content
       if (!c) return ''
-      const lists = c.title_content ?? c.paragraph_content ?? c.table_content ?? c.list_content ?? []
-      if (Array.isArray(lists)) return lists.map((item: any) => item.content ?? '').join('')
-      if (typeof c === 'string') return c
-      return ''
+      const extract = (value: any): string => {
+        if (typeof value === 'string') return value
+        if (Array.isArray(value)) return value.map(extract).join('')
+        if (value && typeof value === 'object') {
+          if (value.content !== undefined) return extract(value.content)
+          return Object.entries(value).filter(([key]) => key.endsWith('_content') || key === 'html')
+            .map(([, child]) => extract(child)).join('\n')
+        }
+        return ''
+      }
+      return extract(c)
   }
 
   if (Array.isArray(jsonContent)) {
       if (jsonContent.length > 0 && Array.isArray(jsonContent[0])) {
           // MinerU content_list_v2.json: 外层按页分组的嵌套数组 [[page0_blocks], [page1_blocks], ...]
           flatBlocks = (jsonContent as any[][]).flatMap((page: any[], pIdx: number) =>
-              page.map((b: any, i: number) => ({ ...b, _page_idx: pIdx, _idx: i }))
+              page.map((b: any, i: number) => ({ ...b, _page_idx: pIdx, _idx: i, _coordinate_system: 'normalized1000' }))
           )
       } else if (jsonContent.length > 0 && (jsonContent[0].parsing_res_list || jsonContent[0].blocks)) {
           // 按页分组的对象格式
@@ -303,7 +310,8 @@ const layoutData = computed(() => {
           text: extractV2Text(b),
           type: b.type ?? b.block_label ?? 'text',
           order: b.order ?? b.block_order ?? null,
-          _page_width: b._page_width ?? null
+          _page_width: b._page_width ?? null,
+          _coordinate_system: b._coordinate_system ?? null
       }
   })
 
@@ -366,7 +374,7 @@ function startPolling() {
   if (stopPolling) stopPolling()
   stopPolling = taskStore.pollTaskStatus(taskId.value, 3000, async (updatedTask) => {
     if (['completed', 'failed', 'cancelled'].includes(updatedTask.status)) {
-      stopPolling()
+      stopPolling?.()
       await refreshTask()
     }
   })
@@ -378,7 +386,7 @@ const downloadMarkdown = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = task.value.data.markdown_file || `${taskId.value}.md`
+  a.download = (task.value.file_name || taskId.value).replace(/\.[^.]+$/, '') + '.md'
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -432,7 +440,7 @@ async function executeAction() {
 
 onMounted(async () => {
   await refreshTask()
-  if (task.value && ['pending', 'processing'].includes(task.value.status)) startPolling()
+  if (task.value && ['pending', 'processing', 'paused'].includes(task.value.status)) startPolling()
 })
 onUnmounted(() => { if (stopPolling) stopPolling() })
 </script>

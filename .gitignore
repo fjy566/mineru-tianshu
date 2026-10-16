@@ -51,6 +51,8 @@ logs/
 
 # Data directory
 data/
+input/
+work/
 
 # Temporary files
 *.tmp

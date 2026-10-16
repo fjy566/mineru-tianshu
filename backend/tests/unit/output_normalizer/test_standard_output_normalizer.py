@@ -69,3 +69,13 @@ def test_rustfs_upload_failure_fails_the_task(runtime_paths, monkeypatch, mocker
 
     with pytest.raises(RuntimeError, match="RUSTFS_ENDPOINT"):
         normalizer.normalize(output_dir)
+
+
+def test_primary_media_json_wins_over_nested_keyframe_json(tmp_path):
+    normalizer = StandardOutputNormalizer()
+    (tmp_path / "content.json").write_text('{"type":"video","keyframe_ocr":{"enabled":true}}')
+    nested = tmp_path / "keyframes" / "auto"
+    nested.mkdir(parents=True)
+    (nested / "result_content_list_v2.json").write_text('[[{"type":"text"}]]')
+    main = normalizer._normalize_json(tmp_path)
+    assert json.loads(main.read_text())["type"] == "video"

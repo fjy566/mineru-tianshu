@@ -56,6 +56,7 @@ class BaseOutputNormalizer:
         result.setdefault("image_count", 0)
         result.setdefault("rustfs_enabled", False)
         result.setdefault("images_uploaded", False)
+        result.setdefault("images_local", False)
 
         # 1.5 可选图片处理钩子（如多模态大模型图片描述写回）
         # 必须在 RustFS 上传前执行：上传后图片被重命名为短随机名，无法按文件名匹配
@@ -65,7 +66,7 @@ class BaseOutputNormalizer:
             except Exception as e:
                 logger.warning(f"⚠️  Image processor failed (continuing): {e}")
 
-        # 2. 自动上传图片到 RustFS 并替换 URL（基础功能，始终启用）
+        # 2. 为图片配置可访问路径：RustFS，或显式启用的本机 API 文件服务。
         if result["image_dir"] and result["image_count"] > 0:
             self._process_rustfs_upload(result)
         else:
@@ -100,20 +101,30 @@ class BaseOutputNormalizer:
     def _process_rustfs_upload(self, result: Dict[str, Any]):
         """把图片上传到 RustFS 并改写引用地址
 
-        对象存储是**强制依赖**：解析结果里的图片必须有浏览器可访问的地址。
-        以前这里上传失败只打一条警告就继续，产出的 Markdown 保留相对路径
-        images/xxx.jpg，浏览器按页面地址解析成 /tasks/images/xxx.jpg → 全部 404，
-        而任务状态仍是 completed，用户完全看不出问题出在哪。
-        现在改为 fail-closed：上传不成功就让任务失败，并给出可操作的原因。
+        解析结果里的图片必须有浏览器可访问的地址：生产模式使用 RustFS，
+        本机开发模式可显式使用鉴权 API 文件服务。两种路径都未启用时 fail-closed，
+        避免任务显示成功但图片链接无法访问。
         """
         image_count = result.get("image_count", 0)
 
         rustfs_enabled = os.getenv("RUSTFS_ENABLED", "true").lower() in ("true", "1", "yes")
         if not rustfs_enabled:
+            local_file_server_enabled = os.getenv("TIANSHU_LOCAL_FILE_SERVER_ENABLED", "false").lower() in (
+                "true",
+                "1",
+                "yes",
+            )
+            if local_file_server_enabled:
+                logger.info("ℹ️  RustFS disabled; images remain local and are served by the authenticated API file route")
+                result["rustfs_enabled"] = False
+                result["images_uploaded"] = False
+                result["images_local"] = True
+                return
+
             raise RuntimeError(
                 f"解析结果包含 {image_count} 张图片，但 RUSTFS_ENABLED=false。"
-                "对象存储是本平台的必需依赖，关闭后图片无法被浏览器访问。"
-                "请在 .env 中设置 RUSTFS_ENABLED=true 并配置 RUSTFS_PUBLIC_URL 后重试。"
+                "当前未启用本地 API 图片服务，图片无法被浏览器访问。"
+                "请启用 TIANSHU_LOCAL_FILE_SERVER_ENABLED，或配置 RustFS 后重试。"
             )
 
         logger.info(f"📤 Uploading {image_count} images to RustFS...")

@@ -63,7 +63,9 @@ class StandardOutputNormalizer(BaseOutputNormalizer):
             return standard_md
 
         # 选择最大的 .md 文件（通常是主文件）
-        main_md = max(md_files, key=lambda f: f.stat().st_size)
+        main_md = output_dir / "content.md"
+        if not main_md.is_file():
+            main_md = max(md_files, key=lambda f: f.stat().st_size)
         logger.info(f"📄 Found main markdown: {main_md.relative_to(output_dir)}")
 
         # 如果不在根目录，移动到根目录
@@ -171,15 +173,15 @@ class StandardOutputNormalizer(BaseOutputNormalizer):
             logger.info(f"✅ Standard JSON file already exists: {standard_json.name}")
             return standard_json
 
-        # 选择主 JSON 文件（优先选择 content_list.json 或最大的文件）
-        main_json = None
-        for f in json_files:
-            if "content_list" in f.name or "result" in f.name:
-                main_json = f
-                break
-
-        if not main_json:
-            main_json = max(json_files, key=lambda f: f.stat().st_size)
+        # 主引擎的 content.json 优先于关键帧等辅助子目录的解析结果。
+        main_json = output_dir / "content.json"
+        if not main_json.is_file():
+            ordered = sorted(json_files, key=lambda f: (len(f.relative_to(output_dir).parts), f.name))
+            main_json = next((f for f in ordered if f.name.endswith("_content_list_v2.json")), None)
+            if main_json is None:
+                main_json = next((f for f in ordered if f.name.endswith("_content_list.json")), None)
+            if main_json is None:
+                main_json = max(json_files, key=lambda f: f.stat().st_size)
 
         logger.info(f"📄 Found main JSON: {main_json.relative_to(output_dir)}")
 

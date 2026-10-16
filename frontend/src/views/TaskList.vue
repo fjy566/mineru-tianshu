@@ -68,7 +68,13 @@
             >
               <option value="">{{ $t('task.allBackends') }}</option>
               <optgroup label="MinerU Standard">
-                <option value="pipeline">Pipeline (PDF)</option>
+                <option value="auto">{{ $t('format.backendAuto') }}</option>
+              <option value="fasta">FASTA</option>
+              <option value="fastq">FASTQ</option>
+              <option value="genbank">GenBank</option>
+              <option value="vlm-http-client">VLM Remote</option>
+              <option value="hybrid-http-client">Hybrid Remote</option>
+              <option value="pipeline">Pipeline (PDF)</option>
                 <option value="hybrid-auto-engine">Hybrid (High Prec.)</option>
               </optgroup>
               <optgroup label="Visual Models">
@@ -276,7 +282,7 @@
                   </button>
 
                   <button
-                    v-if="task.status === 'failed'"
+                    v-if="['failed', 'cancelled'].includes(task.status)"
                     @click="handleAction('retry', task)"
                     :disabled="isActionLoading(task.task_id)"
                     class="btn-icon text-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -298,7 +304,7 @@
                   </button>
 
                   <button
-                    v-if="['pending', 'processing'].includes(task.status)"
+                    v-if="['pending', 'processing', 'paused'].includes(task.status)"
                     @click="handleAction('cancel', task)"
                     :disabled="isActionLoading(task.task_id)"
                     class="btn-icon text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -381,6 +387,7 @@
         <div class="flex gap-2 w-full sm:w-auto justify-between sm:justify-end">
           <button
             @click="changePage(currentPage - 1)"
+            :aria-label="$t('auditLog.prevPage')"
             :disabled="currentPage === 1"
             class="page-btn"
           >
@@ -393,6 +400,7 @@
           </div>
           <button
             @click="changePage(currentPage + 1)"
+            :aria-label="$t('auditLog.nextPage')"
             :disabled="currentPage === totalPages"
             class="page-btn"
           >
@@ -591,7 +599,7 @@ function isActionLoading(taskId: string, actionType?: string) {
  * 统一处理单个任务的操作
  */
 // 子任务行传入 ChildTask（带上 parent_task_id），只用到 task_id / 父子信息
-type ActionTarget = Pick<Task, 'task_id'> & Partial<Task>
+type ActionTarget = Pick<Task, 'task_id'> & Omit<Partial<Task>, 'retry_count'> & {retry_count?: number | null}
 
 function handleAction(action: 'retry' | 'pause' | 'resume' | 'cancel' | 'clearCache', task: ActionTarget) {
   // 设置待执行的 Action
@@ -609,9 +617,9 @@ function handleAction(action: 'retry' | 'pause' | 'resume' | 'cancel' | 'clearCa
         case 'cancel': await taskStore.cancelTask(task.task_id); break;
       }
       await refreshTasks() // 操作后刷新列表（已展开父任务的分片一并刷新）
-    } catch (error) {
-      console.error(`Action ${action} failed:`, error)
-      alert(`Action failed: ${error}`) // 简单提示，建议替换为 Toast
+    } catch (error: any) {
+      toast.error(error?.response?.status === 409 ? t('task.stateChanged') : (error?.response?.data?.detail || error.message))
+      await refreshTasks()
     } finally {
       actionLoading.value = false
       currentActionTaskId.value = null
@@ -694,11 +702,11 @@ function confirmClearFailed() {
 function batchCancel() {
   const pendingIds = selectedTasks.value.filter(id => {
     const task = tasks.value.find(t => t.task_id === id)
-    return task?.status === 'pending'
+    return task && ['pending', 'processing', 'paused'].includes(task.status)
   })
 
   if (pendingIds.length === 0) {
-    alert(t('task.noPendingTasksToCancel'))
+    toast.info(t('task.noPendingTasksToCancel'))
     return
   }
 
@@ -706,9 +714,8 @@ function batchCancel() {
     actionLoading.value = true
     currentActionType.value = 'batchCancel'
     try {
-      for (const id of pendingIds) {
-        await taskStore.cancelTask(id)
-      }
+      const outcomes = await Promise.allSettled(pendingIds.map(id => taskStore.cancelTask(id)))
+      if (outcomes.some(result => result.status === 'rejected')) toast.error(t('task.stateChanged'))
       selectedTasks.value = []
       selectAll.value = false
       await refreshTasks(true)

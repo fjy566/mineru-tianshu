@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useTaskStore, useQueueStore } from '@/stores'
 import { formatRelativeTime } from '@/utils/format'
 import StatCard from '@/components/StatCard.vue'
@@ -174,7 +174,7 @@ const recentTasks = computed(() => {
 })
 
 async function refreshTasks() {
-  await taskStore.fetchTasks(undefined, 10)
+  await taskStore.fetchTasks({ page: 1, page_size: 10 })
 }
 
 onMounted(async () => {

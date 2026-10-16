@@ -650,7 +650,7 @@
                     </td>
                   </tr>
                   <tr v-for="d in webhookDeliveries" :key="d.delivery_id">
-                    <td class="text-sm text-gray-600 whitespace-nowrap">{{ d.created_at }}</td>
+                    <td class="text-sm text-gray-600 whitespace-nowrap">{{ formatDateTime(d.created_at) }}</td>
                     <td class="text-sm text-gray-900 whitespace-nowrap">{{ d.event }}</td>
                     <td class="text-sm whitespace-nowrap">
                       <span class="badge" :class="webhookSourceClass(d.source)">
@@ -825,7 +825,7 @@
                       </td>
                     </tr>
                     <tr v-for="log in auditLogs" :key="log.id">
-                      <td class="text-sm text-gray-600 whitespace-nowrap">{{ log.created_at }}</td>
+                      <td class="text-sm text-gray-600 whitespace-nowrap">{{ formatDateTime(log.created_at) }}</td>
                       <td class="text-sm text-gray-900">{{ log.username || $t('auditLog.anonymous') }}</td>
                       <td class="text-sm whitespace-nowrap">
                         <span class="badge" :class="auditActionClass(log.action)">
@@ -903,7 +903,9 @@ import {
   type AuditLogItem,
   type AuditLogQuery,
 } from '@/api'
+import { formatDateTime } from '@/utils/format'
 import { toast } from '@/utils/toast'
+import { useSystemStore } from '@/stores/systemStore'
 import FormToggle from '@/components/FormToggle.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import KeyWebhookDialog from '@/components/KeyWebhookDialog.vue'
@@ -911,6 +913,7 @@ import { getAllAPIKeys } from '@/api/authApi'
 import type { AdminAPIKeyInfo } from '@/api/types'
 
 const { t, tm } = useI18n()
+const systemStore = useSystemStore()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -1203,10 +1206,9 @@ async function handleSubmit() {
 
     toast.success(t('systemConfig.saveSuccess'))
 
-    // 刷新页面以应用新配置（特别是系统名称和 Logo）
-    setTimeout(() => {
-      window.location.reload()
-    }, 1500)
+    // 立即同步显示配置，避免延迟刷新丢失其他设置表单。
+    await systemStore.loadConfig()
+    systemStore.updatePageTitle(t('nav.systemConfig'))
   } catch (error: any) {
     console.error('Failed to update system config:', error)
     toast.error(error.response?.data?.detail || t('systemConfig.saveError'))
@@ -1344,7 +1346,7 @@ function formatAuditDetail(log: AuditLogItem): string {
   if (detail.file_name) params.fileName = String(detail.file_name)
   if (detail.username) params.username = String(detail.username)
   if (detail.name) params.name = String(detail.name)
-  if (Array.isArray(detail.scopes)) params.scopes = detail.scopes.join(', ')
+  params.scopes = Array.isArray(detail.scopes) ? detail.scopes.join(', ') : '*'
   if (Array.isArray(detail.keys)) params.keys = detail.keys.join(', ')
   if (detail.deleted_count !== undefined) params.count = String(detail.deleted_count)
   if (detail.reset_count !== undefined) params.count = String(detail.reset_count)

@@ -41,6 +41,7 @@
         </div>
         <button
           @click="removeFile(index)"
+          :aria-label="`${$t('common.delete')} ${file.name}`"
           class="ml-2 p-1 text-gray-400 hover:text-red-600 transition-colors"
         >
           <X class="w-5 h-5" />
@@ -92,6 +93,7 @@ function onFileChange(event: Event) {
   const target = event.target as HTMLInputElement
   if (target.files) {
     addFiles(Array.from(target.files))
+    target.value = ''
   }
 }
 
@@ -123,7 +125,9 @@ function addFiles(newFiles: File[]) {
   }
 
   if (props.multiple) {
-    files.value = [...files.value, ...newFiles]
+    files.value = [...files.value, ...newFiles.filter(file => !files.value.some(
+      old => old.name === file.name && old.size === file.size && old.lastModified === file.lastModified
+    ))]
   } else {
     files.value = newFiles.slice(0, 1)
   }
@@ -140,6 +144,7 @@ function removeFile(index: number) {
 defineExpose({
   clearFiles: () => {
     files.value = []
+    if (fileInput.value) fileInput.value.value = ''
     emit('update:files', files.value)
   }
 })

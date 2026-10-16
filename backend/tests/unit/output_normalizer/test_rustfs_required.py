@@ -1,8 +1,7 @@
-"""对象存储是强制依赖：含图片的任务上传失败必须让任务失败
+"""含图片的任务必须使用 RustFS 或本机 API 文件服务；都未启用时必须失败。
 
-对应线上故障：一篇论文解析完成、状态 completed，但前端所有图片 404
-（请求落到 /tasks/<id>/images/<hash>.jpg）。原因是 RUSTFS_ENABLED=false 时
-上传被跳过、Markdown 保留相对路径，而流程照常返回成功，用户无从判断。
+历史问题：RUSTFS_ENABLED=false 时图片保留相对路径，前端无法访问；
+本机开发模式现在使用鉴权 API 文件接口提供这些图片。
 """
 
 import pytest
@@ -31,9 +30,22 @@ def result_with_images(tmp_path):
 class TestRustfsRequired:
     def test_disabled_raises(self, normalizer, result_with_images, monkeypatch):
         monkeypatch.setenv("RUSTFS_ENABLED", "false")
+        monkeypatch.setenv("TIANSHU_LOCAL_FILE_SERVER_ENABLED", "false")
 
-        with pytest.raises(RuntimeError, match="必需依赖"):
+        with pytest.raises(RuntimeError, match="本地 API 图片服务"):
             normalizer._process_rustfs_upload(result_with_images)
+
+    def test_local_file_server_keeps_images_local(self, normalizer, result_with_images, monkeypatch, mocker):
+        monkeypatch.setenv("RUSTFS_ENABLED", "false")
+        monkeypatch.setenv("TIANSHU_LOCAL_FILE_SERVER_ENABLED", "true")
+        upload = mocker.patch.object(BaseOutputNormalizer, "_upload_images_to_rustfs")
+
+        normalizer._process_rustfs_upload(result_with_images)
+
+        upload.assert_not_called()
+        assert result_with_images["rustfs_enabled"] is False
+        assert result_with_images["images_uploaded"] is False
+        assert result_with_images["images_local"] is True
 
     def test_upload_exception_raises_with_actionable_message(self, normalizer, result_with_images, monkeypatch, mocker):
         monkeypatch.setenv("RUSTFS_ENABLED", "true")

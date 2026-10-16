@@ -266,6 +266,14 @@ export const useTaskStore = defineStore('task', () => {
     error.value = null
   }
 
+  async function deleteTask(taskId: string) {
+    const response = await taskApi.deleteTask(taskId)
+    tasks.value = tasks.value.filter(task => task.task_id !== taskId)
+    total.value = Math.max(0, total.value - 1)
+    if (currentTask.value?.task_id === taskId) currentTask.value = null
+    return response
+  }
+
   function reset() {
     tasks.value = []
     total.value = 0
@@ -288,6 +296,7 @@ export const useTaskStore = defineStore('task', () => {
     fetchTaskStatus,
     fetchTasks,
     cancelTask,
+    deleteTask,
     retryTask,
     pauseTask,
     resumeTask,

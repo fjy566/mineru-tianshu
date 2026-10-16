@@ -32,9 +32,9 @@ class KeyframeExtractor:
         self,
         scene_threshold: float = 30.0,
         min_scene_length: float = 1.0,
-        quality_threshold: float = 100.0,
+        quality_threshold: float = 10.0,
         phash_threshold: int = 5,
-        brightness_range: Tuple[int, int] = (30, 225),
+        brightness_range: Tuple[int, int] = (0, 255),
     ):
         self.scene_threshold = scene_threshold
         self.min_scene_length = min_scene_length
@@ -84,6 +84,9 @@ class KeyframeExtractor:
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
+        if not cap.isOpened() or fps <= 0 or total_frames <= 0:
+            cap.release()
+            raise ValueError("视频帧率或帧数无效")
         scene_frames = []
         prev_frame = None
         frame_count = 0
@@ -127,7 +130,7 @@ class KeyframeExtractor:
         if len(scene_frames) == 0:
             logger.warning("   未检测到场景变化，使用固定间隔采样")
             interval = 10  # 每 10 秒
-            for i in range(0, int(total_frames / fps), interval):
+            for i in range(0, max(1, int(total_frames / fps)), interval):
                 scene_frames.append((float(i), int(i * fps)))
 
         return scene_frames

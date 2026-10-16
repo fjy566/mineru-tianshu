@@ -32,8 +32,7 @@ except ImportError:
     torch = None
 
 
-# 配置了本地 vLLM 时，进程内引擎改走 HTTP 客户端：进程内引擎要求镜像里装 vllm 包，
-# 而本项目的 vLLM 跑在独立容器里（见 backend/requirements.txt 中 mineru[core] 的说明）。
+# 配置了远程 vLLM 地址时，旧的进程内模式名称改写为 HTTP 客户端。
 _LOCAL_VLLM_REWRITE = {
     "vlm-auto-engine": "vlm-http-client",
     "hybrid-auto-engine": "hybrid-http-client",
@@ -125,7 +124,7 @@ class MinerUPipelineEngine:
             logger.info("=" * 60)
 
             try:
-                from mineru.cli.common import do_parse
+                from .mineru4_adapter import do_parse
 
                 self._pipeline = do_parse
                 logger.info("✅ MinerU Pipeline loaded successfully!")
@@ -230,7 +229,7 @@ class MinerUPipelineEngine:
         with self._lock:
             logger.info("🧹 Starting memory cleanup...")
             try:
-                from mineru.utils.model_utils import clean_memory
+                from mineru.model.runtime.memory import clean_memory
 
                 clean_memory()
             except Exception:
@@ -310,8 +309,8 @@ class MinerUPipelineEngine:
             f_dump_content_list = options.get("dump_content_list", True)
             f_dump_orig_pdf = options.get("dump_orig_pdf", True)
 
-            start_page_id = options.get("start_page_id", 0)
-            end_page_id = options.get("end_page_id", None)
+            start_page_id = options.get("start_page_id", options.get("start_page", 0))
+            end_page_id = options.get("end_page_id", options.get("end_page"))
 
             try:
                 start_page_id = int(start_page_id)
@@ -333,7 +332,7 @@ class MinerUPipelineEngine:
             with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
-            if file_ext in [".png", ".jpg", ".jpeg"]:
+            if file_ext in [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"]:
                 logger.info("🖼️  Converting image to PDF...")
                 try:
                     # ifvalid：EXIF 方向值非法（如 0）时告警并忽略，而不是直接抛错

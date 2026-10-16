@@ -6,8 +6,8 @@
 1. MinerU / YOLO / Audio 模型: 使用此脚本预先下载到 ./models 目录。
 2. LaMa 等运行时按需获取的模型: 设置为 auto_download，首次使用时由引擎自动下载。
 3. 配置文件生成:
-   - 自动在模型目录生成 mineru.json（MinerU 3.0 新格式），供 entrypoint 脚本分发到各服务。
-   - 配置文件格式: {"models-dir": {"pipeline": "...", "vlm": "..."}, "config_version": "1.3.1"}
+   - 自动在模型目录生成 mineru4.yaml（MinerU 4 配置），供 MINERU_CONFIG 指定给各服务。
+   - 配置包含 model.base_dir、model.source、model.small_backend 与 model.vlm.engine。
 """
 
 import os
@@ -30,18 +30,19 @@ MODELS = {
     # 1. MinerU 核心模型 (需要预下载)
     # -------------------------------------------------------------------------
     "mineru_pipeline": {
-        "name": "MinerU Pipeline (PDF-Extract-Kit)",
-        "repo_id": "OpenDataLab/PDF-Extract-Kit-1.0",
+        "name": "MinerU 4 Basic (ONNX)",
+        "repo_id": "OpenDataLab/MinerU-4_models_onnx",
         "source": "modelscope",
-        "target_dir": "PDF-Extract-Kit-1.0",
+        "target_dir": "MinerU-4_models_onnx",
         "description": "PDF OCR, Layout Analysis models (For 'pipeline' mode)",
         "required": True,
     },
     "mineru_vlm": {
         "name": "MinerU 2.5 Pro VLM (1.2B)",
-        "model_id": "OpenDataLab/MinerU2.5-Pro-2605-1.2B",
+        "model_id": "jinzhenj/MinerU2.5-Pro-2605-1.2B-GGUF",
         "source": "modelscope",
-        "target_dir": "MinerU2.5-Pro-2605-1.2B",
+        "target_dir": "MinerU2.5-Pro-2605-1.2B-GGUF",
+        "allow_patterns": ["MinerU2.5-Pro-2605-1.2B-Q8_0.gguf", "mmproj-MinerU2.5-Pro-2605-1.2B-Q8_0.gguf"],
         "description": "Vision Language Model (For 'vlm-engine' & 'hybrid-engine')",
         "required": True,
     },
@@ -115,13 +116,13 @@ def download_from_huggingface(repo_id, target_dir, filename=None):
         return None
 
 
-def download_from_modelscope(model_id, target_dir):
+def download_from_modelscope(model_id, target_dir, allow_patterns=None):
     """从 ModelScope 下载"""
     try:
         from modelscope import snapshot_download
 
         logger.info(f"    Downloading from ModelScope: {model_id}")
-        path = snapshot_download(model_id, local_dir=str(target_dir), revision="master")
+        path = snapshot_download(model_id, local_dir=str(target_dir), revision="master", allow_patterns=allow_patterns)
         return path
     except Exception as e:
         logger.error(f"    ❌ Download failed: {e}")
@@ -139,29 +140,12 @@ def verify_model_files(path, model_name):
     if not path_obj.exists():
         return False
 
-    # 1. MinerU Pipeline - 校验 MinerU 3.0 必需的子路径
-    # 参考: mineru/utils/enum_class.py ModelPath
     if model_name == "mineru_pipeline":
-        models_dir = path_obj / "models"
-        required_subpaths = [
-            models_dir / "Layout" / "PP-DocLayoutV2",
-            models_dir / "MFR" / "unimernet_hf_small_2503",  # MinerU 3.0 新版本路径(带 _2503 后缀)
-            models_dir / "MFR" / "pp_formulanet_plus_m",  # MinerU 3.0 新增
-            models_dir / "OCR" / "paddleocr_torch",
-        ]
-        missing = [str(p) for p in required_subpaths if not p.exists()]
-        if missing:
-            logger.warning("    ⚠️  Missing MinerU 3.0 required paths:")
-            for m in missing:
-                logger.warning(f"        - {m}")
-            return False
-        return True
+        from mineru.model.registry import MINERU_4_MODELS_ONNX
 
-    # 2. MinerU VLM
+        return all((path_obj / value).is_file() for value in MINERU_4_MODELS_ONNX.paths.values())
     elif model_name == "mineru_vlm":
-        if not any(path_obj.rglob("*.safetensors")):
-            logger.warning(f"    ⚠️  No safetensors found in {path}")
-            return False
+        return all((path_obj / value).is_file() for value in MODELS["mineru_vlm"]["allow_patterns"])
 
     # 3. YOLO (单文件或目录)
     elif model_name == "yolo11":
@@ -192,59 +176,30 @@ def check_model_exists(output_path, config, name):
         return (f.exists() and f.stat().st_size > 0), "File found"
     if not target_dir.exists():
         return False, "Dir missing"
-    # MinerU Pipeline: 额外校验 MinerU 3.0 必需的子路径，防止旧版本目录跳过更新
-    if name == "mineru_pipeline":
-        models_dir = target_dir / "models"
-        required = [
-            models_dir / "Layout" / "PP-DocLayoutV2",
-            models_dir / "MFR" / "unimernet_hf_small_2503",
-            models_dir / "MFR" / "pp_formulanet_plus_m",
-            models_dir / "OCR" / "paddleocr_torch",
-        ]
-        missing = [p for p in required if not p.exists()]
-        if missing:
-            return False, f"Missing MinerU 3.0 paths: {[p.name for p in missing]}"
+    if name in {"mineru_pipeline", "mineru_vlm"}:
+        ready = verify_model_files(target_dir, name)
+        return ready, "Files verified" if ready else "MinerU 4 files missing"
     if any(target_dir.iterdir()):
         return True, "Files found"
     return False, "Dir empty"
 
 
-def generate_mineru_json(output_dir):
-    """
-    生成 mineru.json (MinerU 3.0 新格式)
-    ✅ [核心修复] 将配置文件直接保存到共享的 models 目录下 (output_dir)，
-    这样该文件会持久化到宿主机 ./models/mineru.json，
-    并由 docker-entrypoint.sh 脚本分发到各容器的 ~/mineru.json。
+def generate_mineru_config(output_dir):
+    """生成 MinerU 4 使用的 YAML 配置，模型根目录与本次下载目录保持一致。"""
+    import yaml
 
-    MinerU 3.0 配置格式变更:
-    - 旧: {"models-dir": "...", "vlm-models-dir": "..."}
-    - 新: {"models-dir": {"pipeline": "...", "vlm": "..."}, "model-source": "...", "config_version": "1.3.2"}
-
-    model-source 必须显式写 "local"：缺省时 MinerU 3.4+ 会按旧版配置做原地迁移，
-    把 model-source 写成 huggingface，离线/本地模型部署下解析时会尝试联网下载而失败。
-    """
-    config_path = Path(output_dir) / "mineru.json"
-
-    # 注意：这里的 paths 是容器内的绝对路径。
-    # pipeline 必须指向仓库根（不含 models/ 后缀）：MinerU 3.4+ 的模型相对路径
-    # （如 models/MFR/unimernet_hf_small_2503）自带 models/ 前缀，指到子目录会拼出
-    # models/models/... 的双重路径。
+    output_path = Path(output_dir).resolve()
     config = {
-        "models-dir": {
-            "pipeline": "/app/models/PDF-Extract-Kit-1.0",
-            "vlm": "/app/models/MinerU2.5-Pro-2605-1.2B",
-        },
-        "model-source": "local",
-        "config_version": "1.3.2",
+        "model": {
+            "base_dir": str(output_path),
+            "source": "local",
+            "small_backend": "onnx",
+            "vlm": {"engine": "llama-cpp"},
+        }
     }
-    try:
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(config, f, ensure_ascii=False, indent=4)
-        logger.success(f"✅ mineru.json created at: {config_path}")
-        logger.info("    -> pipeline: /app/models/PDF-Extract-Kit-1.0/models")
-        logger.info("    -> vlm:      /app/models/MinerU2.5-Pro-2605-1.2B")
-    except Exception as e:
-        logger.error(f"❌ Failed to create mineru.json: {e}")
+    config_path = output_path / "mineru4.yaml"
+    config_path.write_text(yaml.safe_dump(config, allow_unicode=True), encoding="utf-8")
+    logger.success(f"✅ MinerU 4 config created at: {config_path}")
 
 
 # ==============================================================================
@@ -314,7 +269,7 @@ def main(output_dir, selected_models=None, force=False):
             elif src == "modelscope":
                 # 优先使用 model_id，如果没有则用 repo_id (兼容旧配置)
                 mid = config.get("model_id") or config.get("repo_id")
-                path = download_from_modelscope(mid, str(target))
+                path = download_from_modelscope(mid, str(target), config.get("allow_patterns"))
 
             # ✅ 核心优化：容错处理
             if path and verify_model_files(path, name):
@@ -339,7 +294,7 @@ def main(output_dir, selected_models=None, force=False):
         logger.info("")
 
     # 无论模型下载成功与否，都尝试生成配置文件，确保容器有配置可用
-    generate_mineru_json(output_path)
+    generate_mineru_config(output_path)
 
     with open(output_path / "manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
