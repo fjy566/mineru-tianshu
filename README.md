@@ -49,8 +49,6 @@
 本仓库 [fjy566/mineru-tianshu](https://github.com/fjy566/mineru-tianshu) 是
 [magicyuan876/mineru-tianshu](https://github.com/magicyuan876/mineru-tianshu) 的 fork。
 **原项目作者为 magicyuan876 及 MinerU Tianshu Contributors；fjy566 维护此 fork 的增量修改。**
-保留原作者署名、Git 历史、上游链接及原始 [Apache License 2.0](LICENSE)，不将原项目作为本 fork 的原创作品。
-第三方引擎、依赖和模型继续适用各自许可证。
 
 ### 2026-10-16 fork 更新
 
